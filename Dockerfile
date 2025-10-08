@@ -9,30 +9,31 @@ RUN apt update \
     && apt install -y minicom curl wget git gdb-multiarch cmake make pkgconf autoconf libreadline-dev tk-dev \
     build-essential libtool automake libftdi-dev libusb-1.0-0-dev gcc texinfo checkinstall \
     libssl-dev libsqlite3-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev \
-    gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib \
+    gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libjim-dev \
     python3 python3-minimal python3-pkg-resources python3-pygments python3-yaml python3.10 python3.10-minimal \
     && apt -y clean \
     && apt -y autoremove \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --branch rp2040 --recursive --depth=1  https://github.com/raspberrypi/openocd.git  \
-    && cd openocd \
-    && ./bootstrap \
-    && ./configure \
-    && make \
-    && make install \
-    && cd .. \
-    && rm -rf openocd
-
 WORKDIR /pico
 
-RUN git clone --depth 1 --branch 1.4.0 https://github.com/raspberrypi/pico-sdk.git pico-sdk \
+RUN git clone --depth 1 --branch 2.2.0 https://github.com/raspberrypi/pico-sdk.git pico-sdk \
     && cd pico-sdk \
-    && git submodule update --init \ 
-    && cd /lib \
-    && rm -rf tinyusb \
-    && git clone --depth 1 --branch 0.14.0 https://github.com/hathach/tinyusb.git
+    && git submodule update --init
 
-RUN git clone https://github.com/raspberrypi/openocd.git openocd
+RUN git clone https://github.com/raspberrypi/openocd.git  \
+    && cd openocd \
+    && ./bootstrap \
+    && ./configure --disable-werror \
+    && make -j4 \
+    && make install
+
+RUN git clone https://github.com/raspberrypi/picotool.git \
+    && cd picotool \
+    && mkdir build \
+    && cd build \
+    && cmake -DPICO_SDK_PATH=$PICO_SDK_PATH .. \
+    && make -j4 \
+    && make install
 
 WORKDIR /

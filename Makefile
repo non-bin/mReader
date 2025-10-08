@@ -13,4 +13,8 @@ build:
 .PHONY: flash
 flash:
 	cd ./build; \
-	openocd -f interface/picoprobe.cfg -f target/rp2040.cfg -c "program $(BINARY).elf verify reset exit"
+	openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "program $(BINARY).elf verify reset exit"
+
+.PHONY: clean
+clean:
+	rm -rf build
