@@ -8,12 +8,11 @@ WORKDIR /tmp
 RUN apt update \
     && apt install -y minicom curl wget git gdb-multiarch cmake make pkgconf autoconf libreadline-dev tk-dev \
     build-essential libtool automake libftdi-dev libusb-1.0-0-dev gcc texinfo checkinstall \
-    libssl-dev libsqlite3-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev \
+    libssl-dev libsqlite3-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev udev \
     gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libjim-dev \
     python3 python3-minimal python3-pkg-resources python3-pygments python3-yaml python3.10 python3.10-minimal \
     && apt -y clean \
-    && apt -y autoremove \
-    && rm -rf /var/lib/apt/lists/*
+    && apt -y autoremove
 
 WORKDIR /pico
 
