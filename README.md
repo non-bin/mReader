@@ -18,6 +18,15 @@ make build
 make flash
 ```
 
+## Serial Connection
+```bash
+# the device could be different on your system
+minicom -b 115200 -o -D /dev/ttyUSB0
+minicom -b 115200 -o -D /dev/ttyACM0
+
+screen /dev/ttyUSB0 115200
+```
+
 ## Linting
 
 There is an option to enable C++ code linting functionality using [Clang-tidy](https://clang.llvm.org/extra/clang-tidy/). Install the linter using the commands below.
