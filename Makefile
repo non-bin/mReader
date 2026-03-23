@@ -1,7 +1,7 @@
 .PHONY: all
 all: build flash
 
-BINARY = blink
+BINARY = mReader
 
 .PHONY: build
 build:
