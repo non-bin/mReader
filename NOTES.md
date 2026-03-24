@@ -1,12 +1,14 @@
 # mReader
 
-## Catalog
+## Flow
+
+### Catalog
 Back -> Settings
 Enter -> Reader
 
 Vertical menu with pictures on the left, and title, length, progress on the right (2 per page)
 
-## Settings
+### Settings
 Back -> Catalog
 Enter -> Select/deselect item
 
@@ -28,16 +30,20 @@ Vertical menu with single text lines
 - Status bar theme (Light/dark)
 - Software update -> BOOTSEL
 
-## Reader
+### Reader
 Back -> Catalog
 Enter -> Chapters
 
 - Status bar
   - Title, length, progress
 
-## Chapters
+### Chapters
 Back -> Reader
 Enter -> Reader at selected chapter
 
 Vertical menu with single text lines
 Chapter names if available, or h1-h3, or text after 1/2/3 line breaks (don't trigger again until character threshold)
+
+## TODO
+
+- Review all uses of `sleep`

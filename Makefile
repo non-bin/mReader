@@ -13,7 +13,7 @@ build:
 .PHONY: flash
 flash:
 	cd ./build; \
-	openocd -s $(shell pwd) -f interface/cmsis-dap.cfg  -f target/rp2040.cfg -f reset.cfg -c "program $(BINARY).elf verify reset exit"
+	openocd -s $(shell pwd) -f interface/cmsis-dap.cfg -f target/rp2040.cfg -f reset.cfg -c "program $(BINARY).elf verify reset exit"
 
 .PHONY: clean
 clean:
