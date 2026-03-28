@@ -9,7 +9,6 @@
 
 #include "tusb.h"
 #include "msc_disk.h"
-#include "EPD_Test.h"
 #include "EPD_1in54_V2.h"
 #include "ws2812.h"
 
@@ -51,8 +50,8 @@ state_t state = {
     .history = {PAGE_FONT_SIZE},
     .history_index = 0,
     .font_index = 5,
-    .fg_color = BLACK,
-    .bg_color = WHITE,
+    .fg_color = EPAPER_BLACK,
+    .bg_color = EPAPER_WHITE,
 };
 
 uint8_t *image_buffer;
@@ -83,7 +82,7 @@ bool update_screen()
   if (epaper_is_busy())
     return false;
 
-  epaper_fill(WHITE);
+  epaper_fill(EPAPER_WHITE);
 
   uint16_t cursor_y = 0;
 

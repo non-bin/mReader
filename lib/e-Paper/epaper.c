@@ -3,7 +3,6 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "EPD_1in54_V2.h"
-#include "EPD_Test.h"
 #include "GUI_Paint.h"
 #include "fonts.h"
 #include "ws2812.h"

@@ -4,6 +4,9 @@
 #include "../Fonts/fonts.h"
 #include <stdbool.h>
 
+#define EPAPER_WHITE 0xFF
+#define EPAPER_BLACK 0x00
+
 uint8_t epaper_init(void);
 void epaper_clear(void);
 uint8_t *epaper_create_image_buffer(void);
