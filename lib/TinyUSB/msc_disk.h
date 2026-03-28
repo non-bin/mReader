@@ -23,4 +23,4 @@ typedef struct
 } msc_file_info_t;
 
 int msc_disk_get_file_list(msc_file_info_t *files, int max_files);
-int msc_disk_read_file(uint16_t start_cluster, uint32_t size, uint8_t *buffer, uint32_t buffer_size);
+int msc_disk_read_file(uint16_t start_cluster, uint32_t size, uint8_t *buffer, uint32_t buffer_size, uint64_t offset);

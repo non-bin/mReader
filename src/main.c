@@ -14,34 +14,103 @@
 #include "ws2812.h"
 
 absolute_time_t last_screen_update = {0};
-char *text;
-
 absolute_time_t last_gpio_event_time[8] = {0};
 bool button_pressed[8] = {false};
+
+typedef enum
+{
+  BUTTON_NEXT,
+  BUTTON_PREVIOUS,
+  BUTTON_ENTER,
+  BUTTON_BACK
+} button_action_t;
+
+button_action_t button_actions[4] = {BUTTON_NEXT, BUTTON_ENTER, BUTTON_BACK, BUTTON_PREVIOUS};
+
+typedef enum
+{
+  PAGE_CATALOG,
+  PAGE_READER,
+  PAGE_FONT_SIZE
+} page_t;
+
+typedef struct
+{
+  uint64_t scroll;
+  page_t current_page;
+  page_t history[HISTORY_LENGTH];
+  uint16_t history_index;
+  uint16_t font_index;
+  uint16_t fg_color;
+  uint16_t bg_color;
+} state_t;
+
+state_t state = {
+    .scroll = 0,
+    .current_page = PAGE_CATALOG,
+    .history = {PAGE_FONT_SIZE},
+    .history_index = 0,
+    .font_index = 5,
+    .fg_color = BLACK,
+    .bg_color = WHITE,
+};
+
+uint8_t *image_buffer;
+bool screen_update_scheduled = true;
+absolute_time_t now = {0};
+
+char text_buffer_1[EPD_1IN54_V2_IMAGESIZE]; // Can store enough text to fill the entire screen with 1px font
+char text_buffer_2[EPD_1IN54_V2_IMAGESIZE];
 
 extern volatile bool g_usb_just_unmounted;
 extern volatile bool g_usb_mounted;
 
-void usb_storage_task()
+void read_book(uint64_t offset)
 {
-  tud_task(); // TinyUSB device task
+  msc_file_info_t files[10];
+  int count = msc_disk_get_file_list(files, 10);
 
-  if (g_usb_just_unmounted)
+  if (count > 0)
   {
-    g_usb_just_unmounted = false;
-
-    // Get a list of files in the root directory
-    msc_file_info_t files[10];
-    int count = msc_disk_get_file_list(files, 10);
-
-    if (count > 0)
-    {
-      static uint8_t file_buf[1024];
-      int read_len = msc_disk_read_file(files[0].start_cluster, files[0].size, file_buf, sizeof(file_buf) - 1);
-      file_buf[read_len] = '\0';
-      text = (char *)file_buf;
-    }
+    int read_len = msc_disk_read_file(files[0].start_cluster, files[0].size, (uint8_t *)text_buffer_1, sizeof(text_buffer_1) - 1, offset);
+    text_buffer_1[read_len] = '\0';
   }
+  return;
+}
+
+bool update_screen()
+{
+  if (epaper_is_busy())
+    return false;
+
+  epaper_fill(WHITE);
+
+  uint16_t cursor_y = 0;
+
+  switch (state.current_page)
+  {
+  case PAGE_CATALOG:
+    epaper_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, state.fg_color, state.bg_color);
+    epaper_display(image_buffer);
+    break;
+  case PAGE_READER:
+    read_book(state.scroll);
+    epaper_draw_string(0, cursor_y, text_buffer_1, fonts[state.font_index], state.fg_color, state.bg_color);
+    epaper_display(image_buffer);
+    break;
+  case PAGE_FONT_SIZE:
+    itoa(fonts[state.font_index]->Height, text_buffer_1, 10);
+    strlcpy(text_buffer_2, "Font Size: ", sizeof(text_buffer_2));
+    strlcat(text_buffer_2, text_buffer_1, sizeof(text_buffer_2));
+
+    cursor_y = epaper_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, state.fg_color, state.bg_color);
+    epaper_draw_string(0, cursor_y, FONT_PALLET, fonts[state.font_index], state.fg_color, state.bg_color);
+
+    epaper_display(image_buffer);
+    break;
+  }
+
+  return true;
 }
 
 void gpio_callback(uint gpio, uint32_t events)
@@ -58,14 +127,96 @@ void gpio_callback(uint gpio, uint32_t events)
     if (events & GPIO_IRQ_EDGE_RISE && !button_pressed[gpio])
     {
       button_pressed[gpio] = true;
-      if (gpio == BUTTON_1_PIN)
-        put_pixel(LED_RED);
-      else if (gpio == BUTTON_2_PIN)
-        put_pixel(LED_GREEN);
-      else if (gpio == BUTTON_3_PIN)
-        rom_reset_usb_boot_extra(-1, 0, 0); // Reset to BOOTSEL
-      else if (gpio == BUTTON_4_PIN)
-        put_pixel(LED_BLUE);
+
+      // Map GPIO to button number with BUTTON_X_PIN
+      button_action_t button_action = BUTTON_NEXT; // Default action, will be overridden
+      switch (gpio)
+      {
+      case BUTTON_0_PIN:
+        button_action = button_actions[0];
+        break;
+      case BUTTON_1_PIN:
+        button_action = button_actions[1];
+        break;
+      case BUTTON_2_PIN:
+        button_action = button_actions[2];
+        break;
+      case BUTTON_3_PIN:
+        button_action = button_actions[3];
+        break;
+      default:
+        return; // Ignore unrecognized GPIOs
+      }
+
+      switch (state.current_page)
+      {
+      case PAGE_CATALOG:
+        switch (button_action)
+        {
+        case BUTTON_NEXT:
+          break;
+        case BUTTON_PREVIOUS:
+          break;
+        case BUTTON_ENTER:
+          state.current_page = PAGE_READER;
+          state.history_index = (state.history_index + 1) % HISTORY_LENGTH;
+          state.history[state.history_index] = PAGE_CATALOG;
+          state.scroll = 0;
+          screen_update_scheduled = true;
+          break;
+        case BUTTON_BACK:
+          state.current_page = state.history[state.history_index];
+          state.history_index = (state.history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+          screen_update_scheduled = true;
+          break;
+        }
+        break;
+      case PAGE_READER:
+        switch (button_action)
+        {
+        case BUTTON_NEXT:
+          state.scroll += SCROLL_SIZE;
+          screen_update_scheduled = true;
+          break;
+        case BUTTON_PREVIOUS:
+          if (state.scroll >= SCROLL_SIZE)
+          {
+            state.scroll -= SCROLL_SIZE;
+            screen_update_scheduled = true;
+          }
+          break;
+        case BUTTON_ENTER:
+          break;
+        case BUTTON_BACK:
+          state.current_page = state.history[state.history_index];
+          state.history_index = (state.history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+          screen_update_scheduled = true;
+          break;
+        }
+        break;
+      case PAGE_FONT_SIZE:
+        switch (button_action)
+        {
+        case BUTTON_NEXT:
+          state.font_index = (state.font_index + 1) % FONT_COUNT; // Cycle through available fonts
+          screen_update_scheduled = true;
+          break;
+        case BUTTON_PREVIOUS:
+          state.font_index = (state.font_index - 1 + FONT_COUNT) % FONT_COUNT; // Cycle backwards through available fonts
+          screen_update_scheduled = true;
+          break;
+        case BUTTON_ENTER:
+          state.current_page = PAGE_CATALOG; // Sets history below
+          state.scroll = 0;
+          screen_update_scheduled = true;
+          break;
+        case BUTTON_BACK:
+          put_pixel(LED_PURPLE);
+          rom_reset_usb_boot_extra(-1, 0, 0); // Reset to BOOTSEL
+          break;
+        }
+        break;
+      }
     }
     else if (events & GPIO_IRQ_EDGE_FALL && button_pressed[gpio])
     {
@@ -74,12 +225,16 @@ void gpio_callback(uint gpio, uint32_t events)
   }
 
   last_gpio_event_time[gpio] = now;
+
+  if (state.current_page == PAGE_CATALOG) // Back on the catalog page always goes to settings
+  {
+    state.history_index = 0;
+    state.history[0] = PAGE_FONT_SIZE;
+  }
 }
 
 int main()
 {
-  text = malloc(1024);
-
   // Initialize WS2812 LED
   ws2812_init(WS2812_PIN);
   put_pixel(LED_OFF);
@@ -88,133 +243,53 @@ int main()
   tusb_init();                  // Initialize TinyUSB
 
   // Register button interrupts
+  gpio_init(BUTTON_0_PIN);
+  gpio_set_irq_enabled_with_callback(BUTTON_0_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
   gpio_init(BUTTON_1_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_1_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
   gpio_init(BUTTON_2_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_2_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
   gpio_init(BUTTON_3_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
-  gpio_init(BUTTON_4_PIN);
-  gpio_set_irq_enabled_with_callback(BUTTON_4_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
   epaper_init();
-  // epaper_clear();
+  image_buffer = epaper_create_image_buffer();
+  epaper_select_image_buffer(image_buffer);
 
-  uint8_t *imageCache = epaper_create_image_buffer();
-  epaper_select_image_buffer(imageCache);
-
-  // epaper_draw_bitmap(gImage_1IN54);
-  // epaper_draw_bitmap(gImage_1IN54_2);
-
-  uint16_t FG_COLOUR = BLACK;
-  uint16_t BG_COLOUR = WHITE;
-  absolute_time_t now = {0};
+  uint16_t color = 1;
 
   while (1)
   {
-    now = get_absolute_time();
-    usb_storage_task();
+    /////////
+    // USB //
+    /////////
 
-    if (absolute_time_diff_us(last_screen_update, now) > 5 * 1000 * 1000 || last_screen_update == 0) // 5 seconds
+    tud_task(); // TinyUSB device task
+
+    if (g_usb_just_unmounted)
     {
-      last_screen_update = now;
-
-      epaper_fill(BG_COLOUR);
-      epaper_draw_string(5, 5, text, &FONT, FG_COLOUR, BG_COLOUR);
-
-      epaper_display(imageCache);
-
-      uint16_t temp = FG_COLOUR;
-      FG_COLOUR = BG_COLOUR;
-      BG_COLOUR = temp;
+      g_usb_just_unmounted = false;
+      // text = read_book();
     }
+
+    ////////////
+    // Screen //
+    ////////////
+
+    if (screen_update_scheduled)
+    {
+      if (update_screen())
+        screen_update_scheduled = false;
+    }
+
+    //   epaper_fill(state.bg_color);
+    // epaper_draw_number(0, 0, offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
+    //   epaper_draw_string(0, 4, text + offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
+
+    //   epaper_display(imageCache);
   }
 
-  // EPD_1in54_V2_test();
-
-  // uint8_t *BlackImage;
-  // uint16_t Imagesize = ((EPD_1IN54_V2_WIDTH % 8 == 0) ? (EPD_1IN54_V2_WIDTH / 8) : (EPD_1IN54_V2_WIDTH / 8 + 1)) * EPD_1IN54_V2_HEIGHT;
-  // if ((BlackImage = (uint8_t *)malloc(Imagesize)) == NULL)
-  // {
-  //   // printf("Failed to apply for black memory...\n");
-  //   return -1;
-  // }
-
-  // // The image of the previous frame must be uploaded, otherwise the
-  // // first few seconds will display an exception.
-  // EPD_1IN54_V2_DisplayPartBaseImage(BlackImage);
-  // Paint_SelectImage(BlackImage);
-  // Paint_Clear(WHITE);
-  // // enter partial mode
-  // EPD_1IN54_V2_Init_Partial();
-  // // printf("Partial refresh\n");
-
-  // int xpos = 0;
-  // int ypos = 0;
-  // int xinc = 17;
-  // int yinc = 24;
-  // int xfact = 1;
-  // int yfact = 1;
-  // int ledval = 1;
-  // int countdown = 100;
-  // bool lastTime = true;
-  // while (true)
-  // {
-
-  //   // Animate the character (countdown) times.
-  //   if (countdown > 0)
-  //   {
-  //     // sleep_ms(250);
-  //     Paint_ClearWindows(xpos, ypos, xpos + Font24.Width, ypos + Font24.Height, WHITE);
-  //     Paint_DrawChar(xpos, ypos, 'A', &Font24, BLACK, WHITE);
-  //     EPD_1IN54_V2_DisplayPart(BlackImage);
-  //     sleep_ms(100);
-
-  //     Paint_ClearWindows(xpos, ypos, xpos + Font24.Width, ypos + Font24.Height, WHITE);
-  //     Paint_DrawChar(xpos, ypos, ' ', &Font24, BLACK, WHITE);
-  //     // sleep_ms(2000);
-  //     EPD_1IN54_V2_DisplayPart(BlackImage);
-  //     sleep_ms(100);
-
-  //     if (xpos >= 0 && xpos + (xfact * xinc) <= EPD_1IN54_V2_WIDTH - 1)
-  //       xfact = xfact;
-  //     if (xpos >= 0 && xpos + (xfact * xinc) > EPD_1IN54_V2_WIDTH - 1)
-  //       xfact = -1 * xfact;
-  //     if (xpos < 0)
-  //       xfact = -1 * xfact;
-  //     // Update x-position
-  //     xpos = xpos + (xfact * xinc);
-
-  //     if (ypos >= 0 && ypos + (yfact * yinc) <= EPD_1IN54_V2_HEIGHT - 1)
-  //       yfact = yfact;
-  //     if (ypos >= 0 && ypos + (yfact * yinc) > EPD_1IN54_V2_HEIGHT - 1)
-  //       yfact = -1 * yfact;
-  //     if (ypos < 0)
-  //       yfact = -1 * yfact;
-  //     // Update y-position
-  //     ypos = ypos + (yfact * yinc);
-
-  //     countdown = countdown - 1;
-  //   }
-  //   else if (lastTime)
-  //   {
-  //     EPD_1IN54_V2_Init();
-  //     EPD_1IN54_V2_Clear();
-
-  //     EPD_1IN54_V2_Sleep();
-  //     free(BlackImage);
-  //     BlackImage = NULL;
-
-  //     lastTime = !(lastTime);
-  //   }
-  //   else
-  //     sleep_ms(500);
-
-  //   // flip LED state in next iteration
-  //   ledval = ledval ^ 1;
-  // }
-
+  // Should be unreachable
   ws2812_deinit();
-
   return 0;
 }

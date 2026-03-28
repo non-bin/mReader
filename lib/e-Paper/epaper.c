@@ -6,6 +6,7 @@
 #include "EPD_Test.h"
 #include "GUI_Paint.h"
 #include "fonts.h"
+#include "ws2812.h"
 
 void set_GPIO_mode(uint16_t Pin, uint16_t Mode)
 {
@@ -62,8 +63,7 @@ void epaper_clear(void)
 
 uint8_t *epaper_create_image_buffer(void)
 {
-  uint16_t Imagesize = ((EPD_1IN54_V2_WIDTH % 8 == 0) ? (EPD_1IN54_V2_WIDTH / 8) : (EPD_1IN54_V2_WIDTH / 8 + 1)) * EPD_1IN54_V2_HEIGHT;
-  uint8_t *imageBuffer = (uint8_t *)malloc(Imagesize);
+  uint8_t *imageBuffer = (uint8_t *)malloc(EPD_1IN54_V2_IMAGESIZE);
   Paint_NewImage(imageBuffer, EPD_1IN54_V2_WIDTH, EPD_1IN54_V2_HEIGHT, 270, WHITE);
 
   return imageBuffer;
@@ -89,12 +89,22 @@ void epaper_display(uint8_t *imageBuffer)
   EPD_1IN54_V2_Display(imageBuffer);
 }
 
-void epaper_draw_number(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber, sFONT *Font, uint16_t Color_Foreground, uint16_t Color_Background)
+uint16_t epaper_draw_number(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background)
 {
-  Paint_DrawNum(Xpoint, Ypoint, Nummber, Font, Color_Foreground, Color_Background);
+  return Paint_DrawNum(Xpoint, Ypoint, Nummber, Font, Color_Foreground, Color_Background);
 }
 
-void epaper_draw_string(uint16_t Xstart, uint16_t Ystart, const char *pString, sFONT *Font, uint16_t Color_Foreground, uint16_t Color_Background)
+uint16_t epaper_draw_string(uint16_t Xstart, uint16_t Ystart, const char *pString, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background)
 {
-  Paint_DrawString_EN(Xstart, Ystart, pString, Font, Color_Foreground, Color_Background);
+  return Paint_DrawString_EN(Xstart, Ystart, pString, Font, Color_Foreground, Color_Background);
+}
+
+bool epaper_is_busy(void)
+{
+  return EPD_1IN54_V2_read_busy();
+}
+
+void epaper_wait_busy(void)
+{
+  EPD_1IN54_V2_wait_busy();
 }

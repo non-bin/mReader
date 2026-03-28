@@ -6,7 +6,12 @@
     // Sets the run context to one level up instead of the .devcontainer folder.
     "context": "..",
     // Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+
+    "args": {
+      // Pass the host username as a build argument
+      "USERNAME": "${localEnv:USER}"
+    }
   },
   "features": {
     "ghcr.io/devcontainers/features/git:1": {}
@@ -25,7 +30,8 @@
     "--annotation=run.oci.keep_original_groups=1"
     // "--annotation=io.crun.keep_original_groups=1"
   ],
-  "remoteUser": "root",
+  "remoteUser": "${localEnv:USER}",
+  "updateRemoteUserUID": true,
   "privileged": true,
   "mounts": [
     {

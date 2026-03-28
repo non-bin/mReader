@@ -116,8 +116,8 @@ int EPD_1in54_V2_test(void)
 
     Paint_DrawCircle(170, 35, 20, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
     Paint_DrawCircle(170, 85, 20, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-    Paint_DrawString_EN(5, 85, "waveshare", &Font20, BLACK, WHITE);
-    Paint_DrawNum(5, 110, 123456789, &Font20, BLACK, WHITE);
+    // Paint_DrawString_EN(5, 85, "waveshare", &Font20, BLACK, WHITE);
+    // Paint_DrawNum(5, 110, 123456789, &Font20, BLACK, WHITE);
 
     EPD_1IN54_V2_Display(BlackImage);
 
@@ -156,8 +156,8 @@ int EPD_1in54_V2_test(void)
                 }
             }
         }
-        Paint_ClearWindows(15, 65, 15 + Font20.Width * 7, 65 + Font20.Height, WHITE);
-        Paint_DrawTime(15, 65, &sPaint_time, &Font20, WHITE, BLACK);
+        // Paint_ClearWindows(15, 65, 15 + Font20.Width * 7, 65 + Font20.Height, WHITE);
+        // Paint_DrawTime(15, 65, &sPaint_time, &Font20, WHITE, BLACK);
         num = num - 1;
         if (num == 0)
         {

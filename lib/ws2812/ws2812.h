@@ -18,7 +18,7 @@
 #define LED_WHITE 64, 64, 64
 #define LED_OFF 0, 0, 0
 
-void ws2812_init(uint pin);
+void ws2812_init(unsigned int pin);
 void ws2812_deinit();
 void put_pixel(uint8_t r, uint8_t g, uint8_t b);
 

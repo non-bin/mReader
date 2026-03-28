@@ -33,8 +33,9 @@
 #include "epaper.h"
 
 // Display resolution
-#define EPD_1IN54_V2_WIDTH       200
-#define EPD_1IN54_V2_HEIGHT      200
+#define EPD_1IN54_V2_WIDTH 200
+#define EPD_1IN54_V2_HEIGHT 200
+#define EPD_1IN54_V2_IMAGESIZE ((EPD_1IN54_V2_WIDTH % 8 == 0) ? (EPD_1IN54_V2_WIDTH / 8) : (EPD_1IN54_V2_WIDTH / 8 + 1)) * EPD_1IN54_V2_HEIGHT
 
 void EPD_1IN54_V2_Init(void);
 void EPD_1IN54_V2_Init_Partial(void);
@@ -43,5 +44,7 @@ void EPD_1IN54_V2_Display(uint8_t *Image);
 void EPD_1IN54_V2_DisplayPartBaseImage(uint8_t *Image);
 void EPD_1IN54_V2_DisplayPart(uint8_t *Image);
 void EPD_1IN54_V2_Sleep(void);
+bool EPD_1IN54_V2_read_busy(void);
+void EPD_1IN54_V2_wait_busy(void);
 
 #endif

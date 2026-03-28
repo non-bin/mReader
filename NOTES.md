@@ -47,3 +47,5 @@ Chapter names if available, or h1-h3, or text after 1/2/3 line breaks (don't tri
 ## TODO
 
 - Review all uses of `sleep`
+- Battery sense https://github.com/elehobica/pico_battery_op/blob/eb301545807bc7fde54abbf009f13d41569a3e73/power_management.cpp#L86
+- https://en.wikipedia.org/wiki/Knuth%E2%80%93Plass_line-breaking_algorithm

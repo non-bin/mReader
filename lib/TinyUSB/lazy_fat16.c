@@ -142,125 +142,170 @@ bool msc_disk_lazy_format_fat16(void)
   return true;
 }
 
-static uint16_t le16_read(const uint8_t *p) {
+static uint16_t le16_read(const uint8_t *p)
+{
   return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
-static uint32_t le32_read(const uint8_t *p) {
+static uint32_t le32_read(const uint8_t *p)
+{
   return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
-int msc_disk_get_file_list(msc_file_info_t *files, int max_files) {
-    if (!msc_disk_is_formatted()) return 0;
+int msc_disk_get_file_list(msc_file_info_t *files, int max_files)
+{
+  if (!msc_disk_is_formatted())
+    return 0;
 
-    uint8_t bs[512];
-    msc_disk_read_block(0, bs);
+  uint8_t bs[512];
+  msc_disk_read_block(0, bs);
 
-    uint16_t bytes_per_sector = le16_read(&bs[11]);
-    uint8_t sectors_per_cluster = bs[13];
-    uint16_t reserved_sectors = le16_read(&bs[14]);
-    uint8_t num_fats = bs[16];
-    uint16_t root_entries = le16_read(&bs[17]);
-    uint16_t fat_sectors = le16_read(&bs[22]);
+  uint16_t bytes_per_sector = le16_read(&bs[11]);
+  uint8_t sectors_per_cluster = bs[13];
+  uint16_t reserved_sectors = le16_read(&bs[14]);
+  uint8_t num_fats = bs[16];
+  uint16_t root_entries = le16_read(&bs[17]);
+  uint16_t fat_sectors = le16_read(&bs[22]);
 
-    uint32_t root_dir_sectors = (root_entries * 32u + (bytes_per_sector - 1u)) / bytes_per_sector;
-    uint32_t root_lba = reserved_sectors + (num_fats * fat_sectors);
+  uint32_t root_dir_sectors = (root_entries * 32u + (bytes_per_sector - 1u)) / bytes_per_sector;
+  uint32_t root_lba = reserved_sectors + (num_fats * fat_sectors);
 
-    int count = 0;
-    for (uint32_t sec = 0; sec < root_dir_sectors; sec++) {
-        uint8_t buf[512];
-        msc_disk_read_block(root_lba + sec, buf);
+  int count = 0;
+  for (uint32_t sec = 0; sec < root_dir_sectors; sec++)
+  {
+    uint8_t buf[512];
+    msc_disk_read_block(root_lba + sec, buf);
 
-        for (int i = 0; i < 512; i += 32) {
-            uint8_t attr = buf[i + 11];
-            uint8_t first_char = buf[i];
+    for (int i = 0; i < 512; i += 32)
+    {
+      uint8_t attr = buf[i + 11];
+      uint8_t first_char = buf[i];
 
-            if (first_char == 0x00) break; // End of directory
-            if (first_char == 0xE5) continue; // Deleted file
-            if (attr == 0x0F) continue; // LFN entry
-            if (attr & 0x08) continue; // Volume label or Directory
+      if (first_char == 0x00)
+        break; // End of directory
+      if (first_char == 0xE5)
+        continue; // Deleted file
+      if (attr == 0x0F)
+        continue; // LFN entry
+      if (attr & 0x08)
+        continue; // Volume label or Directory
 
-            // It's a valid file!
-            if (count < max_files) {
-                for (int j = 0; j < 8; j++) {
-                    files[count].name[j] = buf[i + j];
-                }
-                files[count].name[8] = 0;
-                // Trim right
-                for (int j = 7; j >= 0 && files[count].name[j] == ' '; j--) {
-                    files[count].name[j] = 0;
-                }
-
-                for (int j = 0; j < 3; j++) {
-                    files[count].ext[j] = buf[i + 8 + j];
-                }
-                files[count].ext[3] = 0;
-                for (int j = 2; j >= 0 && files[count].ext[j] == ' '; j--) {
-                    files[count].ext[j] = 0;
-                }
-
-                files[count].start_cluster = le16_read(&buf[i + 26]);
-                files[count].size = le32_read(&buf[i + 28]);
-                
-                count++;
-            }
+      // It's a valid file!
+      if (count < max_files)
+      {
+        for (int j = 0; j < 8; j++)
+        {
+          files[count].name[j] = buf[i + j];
         }
+        files[count].name[8] = 0;
+        // Trim right
+        for (int j = 7; j >= 0 && files[count].name[j] == ' '; j--)
+        {
+          files[count].name[j] = 0;
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+          files[count].ext[j] = buf[i + 8 + j];
+        }
+        files[count].ext[3] = 0;
+        for (int j = 2; j >= 0 && files[count].ext[j] == ' '; j--)
+        {
+          files[count].ext[j] = 0;
+        }
+
+        files[count].start_cluster = le16_read(&buf[i + 26]);
+        files[count].size = le32_read(&buf[i + 28]);
+
+        count++;
+      }
     }
-    return count;
+  }
+  return count;
 }
 
-int msc_disk_read_file(uint16_t start_cluster, uint32_t file_size, uint8_t *buffer, uint32_t buffer_size) {
-    if (!msc_disk_is_formatted() || start_cluster < 2 || file_size == 0) return 0;
-    
-    uint8_t bs[512];
-    msc_disk_read_block(0, bs);
+int msc_disk_read_file(uint16_t start_cluster, uint32_t file_size, uint8_t *buffer, uint32_t buffer_size, uint64_t offset)
+{
+  if (!msc_disk_is_formatted() || start_cluster < 2 || file_size == 0)
+    return 0;
 
-    uint16_t bytes_per_sector = le16_read(&bs[11]);
-    uint8_t sectors_per_cluster = bs[13];
-    uint16_t reserved_sectors = le16_read(&bs[14]);
-    uint8_t num_fats = bs[16];
-    uint16_t root_entries = le16_read(&bs[17]);
-    uint16_t fat_sectors = le16_read(&bs[22]);
+  uint8_t bs[512];
+  msc_disk_read_block(0, bs);
 
-    uint32_t root_dir_sectors = (root_entries * 32u + (bytes_per_sector - 1u)) / bytes_per_sector;
-    uint32_t first_fat_lba = reserved_sectors;
-    uint32_t data_lba = reserved_sectors + (num_fats * fat_sectors) + root_dir_sectors;
+  uint16_t bytes_per_sector = le16_read(&bs[11]);
+  uint8_t sectors_per_cluster = bs[13];
+  uint16_t reserved_sectors = le16_read(&bs[14]);
+  uint8_t num_fats = bs[16];
+  uint16_t root_entries = le16_read(&bs[17]);
+  uint16_t fat_sectors = le16_read(&bs[22]);
 
-    uint32_t cluster_size = bytes_per_sector * sectors_per_cluster;
-    uint16_t current_cluster = start_cluster;
-    uint32_t bytes_read = 0;
+  uint32_t root_dir_sectors = (root_entries * 32u + (bytes_per_sector - 1u)) / bytes_per_sector;
+  uint32_t first_fat_lba = reserved_sectors;
+  uint32_t data_lba = reserved_sectors + (num_fats * fat_sectors) + root_dir_sectors;
 
-    uint8_t fat_sec[512];
-    uint32_t current_fat_sec = 0xFFFFFFFF;
+  uint32_t cluster_size = bytes_per_sector * sectors_per_cluster;
+  uint16_t current_cluster = start_cluster;
+  uint32_t bytes_read = 0;
+  uint32_t current_offset = 0;
 
-    while (current_cluster >= 2 && current_cluster <= 0xFFF6 && bytes_read < file_size && bytes_read < buffer_size) {
-        // Read data cluster
-        uint32_t cluster_lba = data_lba + (current_cluster - 2) * sectors_per_cluster;
-        
-        for (uint8_t sec = 0; sec < sectors_per_cluster; sec++) {
-            uint8_t data_sec[512];
-            msc_disk_read_block(cluster_lba + sec, data_sec);
-            
-            uint32_t copy_size = 512;
-            if (file_size - bytes_read < copy_size) copy_size = file_size - bytes_read;
-            if (buffer_size - bytes_read < copy_size) copy_size = buffer_size - bytes_read;
-            
-            memcpy(buffer + bytes_read, data_sec, copy_size);
-            bytes_read += copy_size;
-            if (bytes_read >= file_size || bytes_read >= buffer_size) break;
-        }
+  uint8_t fat_sec[512];
+  uint32_t current_fat_sec = 0xFFFFFFFF;
 
-        // Get next cluster from FAT
-        uint32_t fat_offset = current_cluster * 2;
-        uint32_t fat_sec_index = first_fat_lba + (fat_offset / 512);
-        
-        if (current_fat_sec != fat_sec_index) {
-            msc_disk_read_block(fat_sec_index, fat_sec);
-            current_fat_sec = fat_sec_index;
-        }
-        
-        current_cluster = le16_read(&fat_sec[fat_offset % 512]);
+  while (current_cluster >= 2 && current_cluster <= 0xFFF6 && bytes_read < buffer_size && current_offset < file_size)
+  {
+    // Read data cluster
+    uint32_t cluster_lba = data_lba + (current_cluster - 2) * sectors_per_cluster;
+
+    for (uint8_t sec = 0; sec < sectors_per_cluster; sec++)
+    {
+      if (current_offset + 512 <= offset)
+      {
+        current_offset += 512;
+        continue;
+      }
+
+      uint8_t data_sec[512];
+      msc_disk_read_block(cluster_lba + sec, data_sec);
+
+      uint32_t data_offset = 0;
+      if (current_offset < offset)
+      {
+        data_offset = offset - current_offset;
+        current_offset = offset;
+      }
+
+      uint32_t copy_size = 512 - data_offset;
+      if (file_size - current_offset < copy_size)
+        copy_size = file_size - current_offset;
+      if (buffer_size - bytes_read < copy_size)
+        copy_size = buffer_size - bytes_read;
+
+      if (copy_size > 0)
+      {
+        memcpy(buffer + bytes_read, data_sec + data_offset, copy_size);
+        bytes_read += copy_size;
+        current_offset += copy_size;
+      }
+
+      if (current_offset >= file_size || bytes_read >= buffer_size)
+        break;
     }
 
-    return bytes_read;
+    if (current_offset >= file_size || bytes_read >= buffer_size)
+      break;
+
+    // Get next cluster from FAT
+    uint32_t fat_offset = current_cluster * 2;
+    uint32_t fat_sec_index = first_fat_lba + (fat_offset / 512);
+
+    if (current_fat_sec != fat_sec_index)
+    {
+      msc_disk_read_block(fat_sec_index, fat_sec);
+      current_fat_sec = fat_sec_index;
+    }
+
+    current_cluster = le16_read(&fat_sec[fat_offset % 512]);
+  }
+
+  return bytes_read;
 }
