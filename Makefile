@@ -18,6 +18,6 @@ flash:
 
 .PHONY: clean
 clean:
-	rm -rf build
+	rm -rf build generated
 
 buildAndFlash: build flash
