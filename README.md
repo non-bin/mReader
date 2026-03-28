@@ -1,55 +1,66 @@
-# VS Code Dev Container Environment For Raspberry Pi Pico C/C++
+# mReader
 
-This project provides a ready-to-use portable development environment for Raspberry Pi Pico using C/C++ based on [Visual Studio Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers).
+Tiny e-paper e-reader
 
-The environment is based on containers (_Podman to be specific_) which provides a easy to start way to run the development tools and libraries required for C/C++ development. The containers will be configured with all necessary dependencies and tools, such as a C/C++ compiler and debugger. The editor comes configured with extensions for C/C++ development, such as language support and debugging tools.
+## Parts
 
-## Udev Rules
+Essentials:
+- [Waveshare 1.54inch V2 e-Paper with Module](https://www.waveshare.com/wiki/1.54inch_e-Paper_Module_Manual)
+- Any RP2040 based board, I use the [Waveshare RP2040-Zero](https://www.waveshare.com/wiki/RP2040-Zero)
+- 4 buttons
+- Battery and charger board
 
-There might be some issues when mounting devices using root-less containers, such as when using Podman. Because of that there is a requirement to pre-configure UDEV rules for `openocd`. The repository includes [60-openocd.rules](./60-openocd.rules) file which needs to be placed in `etc/udev/rules.d/` and the [Picoprobe](https://github.com/raspberrypi/picoprobe) reconnected. Please note, that these rules were updated for Fedora OS. The original file can be found in [here](https://raw.githubusercontent.com/raspberrypi/openocd/rp2040/contrib/60-openocd.rules). [devcontainer.json](./devcontainer.json) contains custom run arguments with annotations for container runtime, like `run.oci.keep_original_groups=1`. It is meant to fix group membership issues and prevent missing permission errors when trying to access devices from container. Correct annotation needs to be used according to the container runtime (oci, crun).
+Wiring can be inferred from [config.h](./src/config.h)
 
-## Flash Binaries
+## Interface
 
-```bash
-# build binary manually
-make build
+### Catalog
+Back -> Settings
+Enter -> Reader
 
-# flash binary directly using openocd
-make flash
-```
+Vertical menu with pictures on the left, and title, length, progress on the right (2 per page)
 
-## Serial Connection
-```bash
-# the device could be different on your system
-minicom -b 115200 -o -D /dev/ttyUSB0
-minicom -b 115200 -o -D /dev/ttyACM0
+### Settings
+Back -> Catalog
+Enter -> Select/deselect item
 
-screen /dev/ttyUSB0 115200
-```
+Vertical menu with single text lines
+- Orientation
+  - Portrait *
+  - Landscape
+- Buttons (Next Previous Enter Back)
+  - Portrait (Top down)
+    - PEBN *
+    - PBEN
+  - Landscape (Left to right)
+    - BPNE *
+    - PBEN
+- Theme (Light/dark)
+- Text size (px)
+- Scroll size (Number of lines. 1 > screenHeight/textSize)
+- Status bar size (Disabled/px) (display bar while hovering settings)
+- Status bar theme (Light/dark)
+- Software update -> BOOTSEL
 
-## Linting
+### Reader
+Back -> Catalog
+Enter -> Chapters
 
-There is an option to enable C++ code linting functionality using [Clang-tidy](https://clang.llvm.org/extra/clang-tidy/). Install the linter using the commands below.
+- Status bar
+  - Title, length, progress
 
-```bash
-apt update && apt install clang-tidy
+### Chapters
+Back -> Reader
+Enter -> Reader at selected chapter
 
-```
+Vertical menu with single text lines
+Chapter names if available, or h1-h3, or text after 1/2/3 line breaks (don't trigger again until character threshold)
 
-## Picoprobe Wiring
+## TODO
 
-![wiring diagram](./picoprobe-conncetion.png)
-
-## References
-
-- [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk)
-- [Getting started with Raspberry Pi Pico-series](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf)
-- [Pico Debugprobe releases](https://github.com/raspberrypi/debugprobe/releases)
-- [Raspberry Pi Pico and RP2040 - C/C++ Part 1: Blink and VS Code](https://www.digikey.lt/en/maker/projects/raspberry-pi-pico-and-rp2040-cc-part-1-blink-and-vs-code/7102fb8bca95452e9df6150f39ae8422)
-- [Raspberry Pi Pico and RP2040 - C/C++ Part 2: Debugging with VS Code](https://www.digikey.be/en/maker/projects/raspberry-pi-pico-and-rp2040-cc-part-2-debugging-with-vs-code/470abc7efb07432b82c95f6f67f184c0)
-- [Raspberry Pi Pico and Pico W](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)
-- [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
-- [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk)
-- [Picoprobe](https://github.com/raspberrypi/picoprobe)
-- [Getting started with Raspberry Pi Pico](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf)
-- [Picoprobe: Using the Raspberry Pi Pico as Debug Probe](https://mcuoneclipse.com/2022/09/17/picoprobe-using-the-raspberry-pi-pico-as-debug-probe/)
+- Changelog
+- Review all uses of `sleep`
+- Battery sense https://github.com/elehobica/pico_battery_op/blob/eb301545807bc7fde54abbf009f13d41569a3e73/power_management.cpp#L86
+- https://en.wikipedia.org/wiki/Knuth%E2%80%93Plass_line-breaking_algorithm
+- No magic numbers
+- SD module support
