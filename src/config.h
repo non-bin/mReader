@@ -68,17 +68,20 @@
 #define BUTTON_2_PIN 4
 #define BUTTON_3_PIN 6
 #define DEBOUNCE_TIME_MS 20
+#define BUTTON_IRQ_EVENT GPIO_IRQ_EDGE_RISE // GPIO_IRQ_EDGE_FALL
 
 /////////////
 // Display //
 /////////////
 
-#define SPI_PORT spi1
-#define EPD_RST_PIN 12
-#define EPD_DC_PIN 8
-#define EPD_BUSY_PIN 13
-#define EPD_CS_PIN 9
-#define EPD_CLK_PIN 10
-#define EPD_MOSI_PIN 11
+#define EPAPER_MODEL "1in54v2"
+
+#define EPAPER_SPI_PORT spi1
+#define EPAPER_RST_PIN 12
+#define EPAPER_DC_PIN 8
+#define EPAPER_BUSY_PIN 13
+#define EPAPER_CS_PIN 9
+#define EPAPER_CLK_PIN 10
+#define EPAPER_MOSI_PIN 11
 
 #endif // CONFIG_H

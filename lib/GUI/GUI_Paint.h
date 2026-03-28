@@ -30,9 +30,9 @@
  *
  * -----------------------------------------------------------------------------
  * V2.0(2018-11-15):
- * 1.add: Paint_NewImage()
+ * 1.add: epaper_create_image_buffer()
  *    Create an image's properties
- * 2.add: Paint_SelectImage()
+ * 2.add: epaper_select_image_buffer()
  *    Select the picture to be drawn
  * 3.add: Paint_SetRotate()
  *    Set the direction of the cache
@@ -115,13 +115,10 @@ typedef enum
 /**
  * image color
  **/
-#define WHITE 0xFF
-#define BLACK 0x00
-#define RED BLACK
 
-#define IMAGE_BACKGROUND WHITE
-#define FONT_FOREGROUND BLACK
-#define FONT_BACKGROUND WHITE
+#define IMAGE_BACKGROUND EPAPER_WHITE
+#define FONT_FOREGROUND EPAPER_BLACK
+#define FONT_BACKGROUND EPAPER_WHITE
 
 // 4 Gray level
 #define GRAY1 0x03 // Blackest
@@ -187,15 +184,15 @@ typedef struct
 extern PAINT_TIME sPaint_time;
 
 // init and Clear
-void Paint_NewImage(uint8_t *image, uint16_t Width, uint16_t Height, uint16_t Rotate, uint16_t Color);
-void Paint_SelectImage(uint8_t *image);
+uint8_t *epaper_create_image_buffer(uint16_t Width, uint16_t Height, uint16_t Rotate, uint16_t Color);
+void epaper_select_image_buffer(uint8_t *image);
 void Paint_SetRotate(uint16_t Rotate);
 void Paint_SetMirroring(uint8_t mirror);
 void Paint_SetPixel(uint16_t Xpoint, uint16_t Ypoint, uint16_t Color);
 void Paint_SetScale(uint8_t scale);
 
-void Paint_Clear(uint16_t Color);
-void Paint_ClearWindows(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend, uint16_t Color);
+void epaper_draw_fill(uint16_t Color);
+void epaper_draw_fillWindows(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend, uint16_t Color);
 
 // Drawing
 void Paint_DrawPoint(uint16_t Xpoint, uint16_t Ypoint, uint16_t Color, DOT_PIXEL Dot_Pixel, DOT_STYLE Dot_FillWay);
@@ -205,10 +202,10 @@ void Paint_DrawCircle(uint16_t X_Center, uint16_t Y_Center, uint16_t Radius, uin
 
 // Display string
 void Paint_DrawChar(uint16_t Xstart, uint16_t Ystart, const char Acsii_Char, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background);
-uint16_t Paint_DrawString_EN(uint16_t Xstart, uint16_t Ystart, const char *pString, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background);
-uint16_t Paint_DrawNum(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background);
+uint16_t epaper_draw_string(uint16_t Xstart, uint16_t Ystart, const char *pString, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background);
+uint16_t epaper_draw_number_(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber, font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background);
 
 // pic
-void Paint_DrawBitMap(const unsigned char *image_buffer);
+void epaper_draw_bitmap_(const unsigned char *image_buffer);
 
 #endif

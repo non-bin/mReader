@@ -17,7 +17,7 @@
  *     Add scale 7 for 5.65f e-Parper
  * 2.Change: Paint_SetPixel(uint16_t Xpoint, uint16_t Ypoint, uint16_t Color)
  *     Add the branch for scale 7
- * 3.Change: Paint_Clear(uint16_t Color)
+ * 3.Change: epaper_draw_fill(uint16_t Color)
  *     Add the branch for scale 7
  * -----------------------------------------------------------------------------
  * V3.1(2019-10-10):
@@ -38,9 +38,9 @@
  *
  * -----------------------------------------------------------------------------
  * V2.0(2018-11-15):
- * 1.add: Paint_NewImage()
+ * 1.add: epaper_create_image_buffer()
  *    Create an image's properties
- * 2.add: Paint_SelectImage()
+ * 2.add: epaper_select_image_buffer()
  *    Select the picture to be drawn
  * 3.add: Paint_SetRotate()
  *    Set the direction of the cache
@@ -93,8 +93,10 @@ parameter:
     Height  :   The height of the picture
     Color   :   Whether the picture is inverted
 ******************************************************************************/
-void Paint_NewImage(uint8_t *image, uint16_t Width, uint16_t Height, uint16_t Rotate, uint16_t Color)
+uint8_t *epaper_create_image_buffer(uint16_t Width, uint16_t Height, uint16_t Rotate, uint16_t Color)
 {
+    uint8_t *image = (uint8_t *)malloc(EPAPER_IMAGE_SIZE);
+
     Paint.Image = NULL;
     Paint.Image = image;
 
@@ -120,6 +122,8 @@ void Paint_NewImage(uint8_t *image, uint16_t Width, uint16_t Height, uint16_t Ro
         Paint.Width = Height;
         Paint.Height = Width;
     }
+
+    return image;
 }
 
 /******************************************************************************
@@ -127,7 +131,7 @@ function: Select Image
 parameter:
     image : Pointer to the image cache
 ******************************************************************************/
-void Paint_SelectImage(uint8_t *image)
+void epaper_select_image_buffer(uint8_t *image)
 {
     Paint.Image = image;
 }
@@ -259,7 +263,7 @@ void Paint_SetPixel(uint16_t Xpoint, uint16_t Ypoint, uint16_t Color)
     {
         uint32_t Addr = X / 8 + Y * Paint.WidthByte;
         uint8_t Rdata = Paint.Image[Addr];
-        if (Color == BLACK)
+        if (Color == EPAPER_BLACK)
             Paint.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
         else
             Paint.Image[Addr] = Rdata | (0x80 >> (X % 8));
@@ -288,7 +292,7 @@ function: Clear the color of the picture
 parameter:
     Color : Painted colors
 ******************************************************************************/
-void Paint_Clear(uint16_t Color)
+void epaper_draw_fill(uint16_t Color)
 {
     if (Paint.Scale == 2 || Paint.Scale == 4)
     {
@@ -323,7 +327,7 @@ parameter:
     Yend   : y end point
     Color  : Painted colors
 ******************************************************************************/
-void Paint_ClearWindows(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend, uint16_t Color)
+void epaper_draw_fillWindows(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend, uint16_t Color)
 {
     uint16_t X, Y;
     for (Y = Ystart; Y < Yend; Y++)
@@ -644,15 +648,15 @@ parameter:
 return:
     The Y coordinate of the next line of the string, which can be used as a parameter to display the next line of the string
 ******************************************************************************/
-uint16_t Paint_DrawString_EN(uint16_t Xstart, uint16_t Ystart, const char *pString,
-                             font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background)
+uint16_t epaper_draw_string(uint16_t Xstart, uint16_t Ystart, const char *pString,
+                            font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background)
 {
     uint16_t Xpoint = Xstart;
     uint16_t Ypoint = Ystart;
 
     if (Xstart > Paint.Width || Ystart > Paint.Height)
     {
-        // Debug("Paint_DrawString_EN Input exceeds the normal display range\r\n");
+        // Debug("epaper_draw_string Input exceeds the normal display range\r\n");
         return Paint.Height;
     }
 
@@ -725,8 +729,8 @@ parameter:
     Color_Background : Select the background color
 ******************************************************************************/
 #define ARRAY_LEN 255
-uint16_t Paint_DrawNum(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber,
-                       font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background)
+uint16_t epaper_draw_number_(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber,
+                             font_t *Font, uint16_t Color_Foreground, uint16_t Color_Background)
 {
 
     int16_t Num_Bit = 0, Str_Bit = 0;
@@ -756,7 +760,7 @@ uint16_t Paint_DrawNum(uint16_t Xpoint, uint16_t Ypoint, int32_t Nummber,
     }
 
     // show
-    return Paint_DrawString_EN(Xpoint, Ypoint, (const char *)pStr, Font, Color_Foreground, Color_Background);
+    return epaper_draw_string(Xpoint, Ypoint, (const char *)pStr, Font, Color_Foreground, Color_Background);
 }
 
 /******************************************************************************
@@ -767,7 +771,7 @@ info:
     Use a computer to convert the image into a corresponding array,
     and then embed the array directly into Imagedata.cpp as a .c file.
 ******************************************************************************/
-void Paint_DrawBitMap(const unsigned char *image_buffer)
+void epaper_draw_bitmap_(const unsigned char *image_buffer)
 {
     uint16_t x, y;
     uint32_t Addr = 0;

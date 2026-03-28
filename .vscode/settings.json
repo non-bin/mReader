@@ -86,6 +86,7 @@
         "crun",
         "Datasheet",
         "devcontainer",
+        "epaper",
         "gpio",
         "openocd",
         "PICO",

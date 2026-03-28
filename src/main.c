@@ -9,8 +9,9 @@
 
 #include "tusb.h"
 #include "msc_disk.h"
-#include "EPD_1in54_V2.h"
 #include "ws2812.h"
+#include "epaper.h"
+#include "GUI_Paint.h"
 
 absolute_time_t last_screen_update = {0};
 absolute_time_t last_gpio_event_time[8] = {0};
@@ -58,8 +59,8 @@ uint8_t *image_buffer;
 bool screen_update_scheduled = true;
 absolute_time_t now = {0};
 
-char text_buffer_1[EPD_1IN54_V2_IMAGESIZE]; // Can store enough text to fill the entire screen with 1px font
-char text_buffer_2[EPD_1IN54_V2_IMAGESIZE];
+char text_buffer_1[EPAPER_IMAGE_SIZE]; // Can store enough text to fill the entire screen with 1px font
+char text_buffer_2[EPAPER_IMAGE_SIZE];
 
 extern volatile bool g_usb_just_unmounted;
 extern volatile bool g_usb_mounted;
@@ -82,7 +83,7 @@ bool update_screen()
   if (epaper_is_busy())
     return false;
 
-  epaper_fill(EPAPER_WHITE);
+  epaper_draw_fill(EPAPER_WHITE);
 
   uint16_t cursor_y = 0;
 
@@ -252,7 +253,7 @@ int main()
   gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
   epaper_init();
-  image_buffer = epaper_create_image_buffer();
+  image_buffer = epaper_create_image_buffer(EPAPER_WIDTH, EPAPER_HEIGHT, 270, EPAPER_WHITE);
   epaper_select_image_buffer(image_buffer);
 
   uint16_t color = 1;
@@ -281,7 +282,7 @@ int main()
         screen_update_scheduled = false;
     }
 
-    //   epaper_fill(state.bg_color);
+    //   epaper_draw_fill(state.bg_color);
     // epaper_draw_number(0, 0, offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
     //   epaper_draw_string(0, 4, text + offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
 

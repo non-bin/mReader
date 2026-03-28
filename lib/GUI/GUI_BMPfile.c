@@ -98,13 +98,13 @@ uint8_t GUI_ReadBmp(const char *path, uint16_t Xstart, uint16_t Ystart)
     }
     if (bmprgbquad[0].rgbBlue == 0xff && bmprgbquad[0].rgbGreen == 0xff && bmprgbquad[0].rgbRed == 0xff)
     {
-        Bcolor = BLACK;
-        Wcolor = WHITE;
+        Bcolor = EPAPER_BLACK;
+        Wcolor = EPAPER_WHITE;
     }
     else
     {
-        Bcolor = WHITE;
-        Wcolor = BLACK;
+        Bcolor = EPAPER_WHITE;
+        Wcolor = EPAPER_BLACK;
     }
 
     // Read image data into the cache
