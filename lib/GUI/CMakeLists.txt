@@ -3,8 +3,8 @@
 aux_source_directory(. DIR_GUI_SRCS)
 
 include_directories(../e-Paper)
-include_directories(../Fonts)
+include_directories(../fonts)
 
 # Generate the link library
 add_library(GUI ${DIR_GUI_SRCS})
-target_link_libraries(GUI PUBLIC ePaper Fonts)
+target_link_libraries(GUI PUBLIC ePaper fonts)

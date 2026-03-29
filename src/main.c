@@ -91,12 +91,12 @@ bool update_screen()
   {
   case PAGE_CATALOG:
     epaper_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, state.fg_color, state.bg_color);
-    epaper_display(image_buffer);
+    epaper_display(image_buffer, false);
     break;
   case PAGE_READER:
     read_book(state.scroll);
     epaper_draw_string(0, cursor_y, text_buffer_1, fonts[state.font_index], state.fg_color, state.bg_color);
-    epaper_display(image_buffer);
+    epaper_display(image_buffer, false);
     break;
   case PAGE_FONT_SIZE:
     itoa(fonts[state.font_index]->Height, text_buffer_1, 10);
@@ -106,7 +106,7 @@ bool update_screen()
     cursor_y = epaper_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, state.fg_color, state.bg_color);
     epaper_draw_string(0, cursor_y, FONT_PALLET, fonts[state.font_index], state.fg_color, state.bg_color);
 
-    epaper_display(image_buffer);
+    epaper_display(image_buffer, false);
     break;
   }
 
@@ -278,15 +278,16 @@ int main()
 
     if (screen_update_scheduled)
     {
-      if (update_screen())
-        screen_update_scheduled = false;
+      screen_update_scheduled = false;
+      if (!update_screen())
+        screen_update_scheduled = true; // Schedule another if it failed
     }
 
     //   epaper_draw_fill(state.bg_color);
     // epaper_draw_number(0, 0, offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
     //   epaper_draw_string(0, 4, text + offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
 
-    //   epaper_display(imageCache);
+    //   epaper_display(imageCache, false);
   }
 
   // Should be unreachable

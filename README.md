@@ -65,3 +65,4 @@ Chapter names if available, or h1-h3, or text after 1/2/3 line breaks (don't tri
 - Partial refresh
 - https://en.wikipedia.org/wiki/Knuth%E2%80%93Plass_line-breaking_algorithm
 - SD module support
+- Figure out why fonts have to be extern

@@ -23,10 +23,13 @@
 
 // Displayed to demo each font size
 // #define FONT_PALLET " !\"#$\%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\b"
-// #define FONT_PALLET "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
-// #define FONT_PALLET "AaBbCcDdEeFfGgHhIiJjKkLlMm\nNnOoPpQqRrSsTtUuVvWwXxYyZz\n0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
-#define FONT_PALLET "AaBbCcDdEeFfGgHhIi\nJjKkLlMmNnOoPpQqRr\nSsTtUuVvWwXxYyZz\n0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
-#define WORD_SEPARATORS " \n\t&*+-/<=>\\_~"
+// #define FONT_PALLET "ABCDEFGHIJKLMNOPQRSTUVWXYZ\rabcdefghijklmnopqrstuvwxyz\r0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
+// #define FONT_PALLET "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
+// #define FONT_PALLET "AaBbCcDdEeFfGgHhIiJjKkLlMm\rNnOoPpQqRrSsTtUuVvWwXxYyZz\r0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
+#define FONT_PALLET "Aa\rBb\rCc\rDd\rEe\rFf\rGg\rHh\rIi\rJj\rKk\rLl\rMm\rNn\rOo\rPp\rQq\rRr\rSs\rTt\rUu\rVv\rWw\rXx\rYy\rZz\n0123456789\r!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
+//        ^
+
+#define WORD_SEPARATORS " \r\n\t&*+-/<=>\\_~"
 
 // #define FONT3_WIDE_M
 // #define FONT3_WIDE_N

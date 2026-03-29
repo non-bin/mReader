@@ -4,7 +4,11 @@
 #include "ws2812.h"
 #include "epaper.h"
 
-#define EPAPER_ADJUSTED_WIDTH (EPAPER_WIDTH % 8 == 0) ? (EPAPER_WIDTH / 8) : (EPAPER_WIDTH / 8 + 1)
+#if EPAPER_WIDTH % 8 == 0
+#define EPAPER_WIDTH_BYTES (EPAPER_WIDTH / 8)
+#else
+#define EPAPER_WIDTH_BYTES (EPAPER_WIDTH / 8 + 1)
+#endif
 
 // waveform full refresh
 static const unsigned char WAVEFORM_FULL_REFRESH[159] =
@@ -243,7 +247,7 @@ void epaper_clear(uint16_t color)
     epaper_send_command(0x24);
     for (uint16_t j = 0; j < EPAPER_HEIGHT; j++)
     {
-        for (uint16_t i = 0; i < EPAPER_ADJUSTED_WIDTH; i++)
+        for (uint16_t i = 0; i < EPAPER_WIDTH_BYTES; i++)
         {
             epaper_send_data(color);
         }
@@ -251,7 +255,7 @@ void epaper_clear(uint16_t color)
     epaper_send_command(0x26);
     for (uint16_t j = 0; j < EPAPER_HEIGHT; j++)
     {
-        for (uint16_t i = 0; i < EPAPER_ADJUSTED_WIDTH; i++)
+        for (uint16_t i = 0; i < EPAPER_WIDTH_BYTES; i++)
         {
             epaper_send_data(color);
         }
@@ -260,18 +264,20 @@ void epaper_clear(uint16_t color)
 }
 
 // Send an image buffer and display it. Partial must be True when using partial refresh
-void epaper_partial_display(uint8_t *image, bool partial)
+void epaper_display(uint8_t *image, bool partial)
 {
     uint32_t address = 0;
     epaper_send_command(0x24);
+
     for (uint16_t i = 0; i < EPAPER_HEIGHT; i++)
     {
-        for (uint16_t j = 0; j < EPAPER_ADJUSTED_WIDTH; j++)
+        for (uint16_t j = 0; j < EPAPER_WIDTH_BYTES; j++)
         {
-            address = j + i * EPAPER_ADJUSTED_WIDTH;
+            address = j + i * EPAPER_WIDTH_BYTES;
             epaper_send_data(image[address]);
         }
     }
+
     epaper_turn_on_display(partial);
 }
 
@@ -282,18 +288,18 @@ void epaper_partial_upload_base_image(uint8_t *image)
     epaper_send_command(0x24);
     for (uint16_t i = 0; i < EPAPER_HEIGHT; i++)
     {
-        for (uint16_t j = 0; j < EPAPER_ADJUSTED_WIDTH; j++)
+        for (uint16_t j = 0; j < EPAPER_WIDTH_BYTES; j++)
         {
-            address = j + i * EPAPER_ADJUSTED_WIDTH;
+            address = j + i * EPAPER_WIDTH_BYTES;
             epaper_send_data(image[address]);
         }
     }
     epaper_send_command(0x26);
     for (uint16_t i = 0; i < EPAPER_HEIGHT; i++)
     {
-        for (uint16_t j = 0; j < EPAPER_ADJUSTED_WIDTH; j++)
+        for (uint16_t j = 0; j < EPAPER_WIDTH_BYTES; j++)
         {
-            address = j + i * EPAPER_ADJUSTED_WIDTH;
+            address = j + i * EPAPER_WIDTH_BYTES;
             epaper_send_data(image[address]);
         }
     }

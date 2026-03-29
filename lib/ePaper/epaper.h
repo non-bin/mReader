@@ -2,7 +2,7 @@
 #define _EPAPER_H_
 
 #include "config.h"
-#include "../Fonts/fonts.h"
+#include "../fonts/fonts.h"
 #include <stdbool.h>
 
 #define EPAPER_WIDTH 200
@@ -16,7 +16,7 @@ bool epaper_is_busy(void);
 void epaper_init(void);
 void epaper_partial_init(void);
 void epaper_clear(uint16_t color);
-void epaper_partial_display(uint8_t *image, bool partial);
+void epaper_display(uint8_t *image, bool partial);
 void epaper_partial_upload_base_image(uint8_t *image);
 void epaper_sleep(void);
 

@@ -27,7 +27,7 @@ include_directories(./lib/TinyUSB)
 
 # add a compilation subdirectory
 add_subdirectory(lib/ePaper)
-add_subdirectory(lib/Fonts)
+add_subdirectory(lib/fonts)
 add_subdirectory(lib/GUI)
 add_subdirectory(lib/ws2812)
 add_subdirectory(lib/TinyUSB)
@@ -49,7 +49,7 @@ target_link_libraries(${PROJECT_NAME}
 
     ePaper
     GUI
-    Fonts
+    fonts
 
     ws2812
 )

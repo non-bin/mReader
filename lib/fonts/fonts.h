@@ -10,16 +10,16 @@
 
 #define CHAR(row1, ...)                                         \
   {                                                             \
-    sizeof(#row1) - 3, (const uint16_t[]) { row1, __VA_ARGS__ } \
+    sizeof(#row1) - 3, (const uint32_t[]) { row1, __VA_ARGS__ } \
   }
 
 typedef struct
 {
   uint16_t width;
-  const uint16_t *bitmap;
+  const uint32_t *bitmap;
 } font_character_t;
 
-typedef struct
+typedef const struct
 {
   const font_character_t *characters;
   uint16_t Height;
@@ -34,7 +34,9 @@ extern font_t font6;
 extern font_t font8;
 extern font_t font12;
 extern font_t font16;
-#define FONT_COUNT 7
-extern font_t *fonts[FONT_COUNT];
+extern font_t font24;
+extern font_t font20;
+#define FONT_COUNT 9
+extern font_t *const fonts[FONT_COUNT];
 
 #endif /* __FONTS_H */

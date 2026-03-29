@@ -587,7 +587,7 @@ void Paint_DrawChar(uint16_t Xpoint, uint16_t Ypoint, const char Acsii_Char,
         return;
     }
 
-    const uint16_t *ptr = &character.bitmap[0];
+    const uint32_t *ptr = &character.bitmap[0];
     const uint16_t firstColumn = 1 << (character.width - 1);
 
     for (uint16_t row = 0; row < Font->Height; row++)
@@ -694,8 +694,8 @@ uint16_t epaper_draw_string(uint16_t Xstart, uint16_t Ystart, const char *pStrin
             {
                 char *word_start = word;
 
-                // Wrap if needed
-                if (Xpoint + word_width > Paint.Width)
+                // Wrap if needed, but not if this is the first word
+                if (Xpoint + word_width > Paint.Width && !(Ypoint == Ystart && Xpoint == Xstart))
                 {
                     Xpoint = Xstart;
                     Ypoint += Font->Height + Font->LineSpacing;
