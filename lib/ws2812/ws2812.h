@@ -29,16 +29,18 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
+ #include <stdint.h>
+
 #ifndef WS2812_H
 #define WS2812_H
 
-#define LED_RED 128, 0, 0
-#define LED_YELLOW 128, 128, 0
-#define LED_GREEN 0, 128, 0
-#define LED_CYAN 0, 128, 128
-#define LED_BLUE 0, 0, 128
-#define LED_PURPLE 64, 0, 128
-#define LED_WHITE 64, 64, 64
+#define LED_RED 255, 0, 0
+#define LED_YELLOW 255, 255, 0
+#define LED_GREEN 0, 255, 0
+#define LED_CYAN 0, 255, 255
+#define LED_BLUE 0, 0, 255
+#define LED_PURPLE 128, 0, 255
+#define LED_WHITE 128, 128, 128
 #define LED_OFF 0, 0, 0
 
 void ws2812_init(unsigned int pin);

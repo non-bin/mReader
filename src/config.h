@@ -80,7 +80,8 @@
 // LED //
 /////////
 
-#define WS2812_PIN 16
+#define LED_PIN 16
+#define LED_BRIGHTNESS_PERCENT 12
 
 /////////////
 // Buttons //

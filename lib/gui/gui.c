@@ -25,10 +25,8 @@
 #include "config.h"
 #include "gui.h"
 #include "epaper.h"
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 image_buffer_info_t image_buffer_info;
 

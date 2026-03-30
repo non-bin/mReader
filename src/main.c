@@ -255,8 +255,7 @@ void gpio_callback(uint gpio, uint32_t events)
 
 int main()
 {
-  // Initialize WS2812 LED
-  ws2812_init(WS2812_PIN);
+  ws2812_init(LED_PIN);
   put_pixel(LED_OFF);
 
   msc_disk_lazy_format_fat16(); // Ensure filesystem exists

@@ -54,7 +54,8 @@
         "aaron-bond.better-comments",
         "EditorConfig.EditorConfig",
         "redhat.vscode-yaml",
-        "streetsidesoftware.code-spell-checker"
+        "streetsidesoftware.code-spell-checker",
+        "chris-hock.pioasm"
       ]
     }
   }

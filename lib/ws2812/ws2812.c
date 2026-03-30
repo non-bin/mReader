@@ -30,37 +30,51 @@
  */
 
 #include "ws2812.pio.h"
+#include "config.h"
 
-PIO pio;
-uint sm;
+#define LED_BRIGHTNESS_MULTIPLIER LED_BRIGHTNESS_PERCENT / 100
+
+PIO pio; // Programmable I/O
+uint state_machine;
 uint offset;
 
+/**
+ * \brief Find a free pio and state machine, and set them up to drive the led
+ * \param pin The pin that the ws2812 data pin is connected to
+ */
 void ws2812_init(uint pin)
 {
-  // This will find a free pio and state machine for our program and load it for us
   // We use pio_claim_free_sm_and_add_program_for_gpio_range (for_gpio_range variant)
   // so we will get a PIO instance suitable for addressing gpios >= 32 if needed and supported by the hardware
-  bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &sm, &offset, pin, 1, true);
+  bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &state_machine, &offset, pin, 1, true);
   hard_assert(success);
 
-  ws2812_program_init(pio, sm, offset, pin, 800000, false);
+  ws2812_program_init(pio, state_machine, offset, pin, 800000, false);
 }
 
+/**
+ * \brief Free resources and unload the ws2812 program
+ */
 void ws2812_deinit()
 {
-  // This will free resources and unload our program
-  pio_remove_program_and_unclaim_sm(&ws2812_program, pio, sm, offset);
+  pio_remove_program_and_unclaim_sm(&ws2812_program, pio, state_machine, offset);
 }
 
+/**
+ * \brief Convert RGB values to a GRB byte
+ */
 static uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
 {
-  return ((uint32_t)(r) << 8) |
-         ((uint32_t)(g) << 16) |
-         (uint32_t)(b);
+  return ((uint32_t)(r * LED_BRIGHTNESS_MULTIPLIER) << 8) |
+         ((uint32_t)(g * LED_BRIGHTNESS_MULTIPLIER) << 16) |
+         (uint32_t)(b * LED_BRIGHTNESS_MULTIPLIER);
 }
 
+/**
+ * \brief Send a color to the led strip
+ */
 void put_pixel(uint8_t r, uint8_t g, uint8_t b)
 {
   uint32_t pixel_grb = urgb_u32(r, g, b);
-  pio_sm_put_blocking(pio, sm, pixel_grb << 8u);
+  pio_sm_put_blocking(pio, state_machine, pixel_grb << 8u);
 }
