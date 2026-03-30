@@ -1,3 +1,23 @@
+/**
+ * mReader is a micro e-reader
+ * Copyright (C) 2026  Alice Jacka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
+ */
+
 #include "config.h"
 
 #include <stdlib.h>
@@ -11,7 +31,7 @@
 #include "msc_disk.h"
 #include "ws2812.h"
 #include "epaper.h"
-#include "GUI_Paint.h"
+#include "gui.h"
 
 absolute_time_t last_screen_update = {0};
 absolute_time_t last_gpio_event_time[8] = {0};
@@ -83,28 +103,28 @@ bool update_screen()
   if (epaper_is_busy())
     return false;
 
-  epaper_draw_fill(EPAPER_WHITE);
+  gui_draw_fill(EPAPER_WHITE);
 
   uint16_t cursor_y = 0;
 
   switch (state.current_page)
   {
   case PAGE_CATALOG:
-    epaper_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, state.fg_color, state.bg_color);
+    gui_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, state.fg_color, state.bg_color);
     epaper_display(image_buffer, false);
     break;
   case PAGE_READER:
     read_book(state.scroll);
-    epaper_draw_string(0, cursor_y, text_buffer_1, fonts[state.font_index], state.fg_color, state.bg_color);
+    gui_draw_string(0, cursor_y, text_buffer_1, fonts[state.font_index], state.fg_color, state.bg_color);
     epaper_display(image_buffer, false);
     break;
   case PAGE_FONT_SIZE:
-    itoa(fonts[state.font_index]->Height, text_buffer_1, 10);
+    itoa(fonts[state.font_index]->height, text_buffer_1, 10);
     strlcpy(text_buffer_2, "Font Size: ", sizeof(text_buffer_2));
     strlcat(text_buffer_2, text_buffer_1, sizeof(text_buffer_2));
 
-    cursor_y = epaper_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, state.fg_color, state.bg_color);
-    epaper_draw_string(0, cursor_y, FONT_PALLET, fonts[state.font_index], state.fg_color, state.bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, state.fg_color, state.bg_color);
+    gui_draw_string(0, cursor_y, FONT_PALLET, fonts[state.font_index], state.fg_color, state.bg_color);
 
     epaper_display(image_buffer, false);
     break;
@@ -253,8 +273,7 @@ int main()
   gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
   epaper_init();
-  image_buffer = epaper_create_image_buffer(EPAPER_WIDTH, EPAPER_HEIGHT, 270, EPAPER_WHITE);
-  epaper_select_image_buffer(image_buffer);
+  image_buffer = gui_init(EPAPER_WIDTH, EPAPER_HEIGHT, GUI_ROTATE_270, GUI_BITS_PER_PIXEL_2, GUI_MIRROR_NONE);
 
   uint16_t color = 1;
 
@@ -283,9 +302,9 @@ int main()
         screen_update_scheduled = true; // Schedule another if it failed
     }
 
-    //   epaper_draw_fill(state.bg_color);
-    // epaper_draw_number(0, 0, offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
-    //   epaper_draw_string(0, 4, text + offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
+    //   gui_draw_fill(state.bg_color);
+    // gui_draw_number(0, 0, offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
+    //   gui_draw_string(0, 4, text + offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
 
     //   epaper_display(imageCache, false);
   }

@@ -1,17 +1,37 @@
-#include "config.h"
+/**
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documnetation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to  whom the Software is
+ * furished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * \copyright 2019 by the Waveshare team <https://github.com/waveshare/Pico_ePaper_Code>
+ * \copyright 2022 by hammadrauf <https://github.com/hammadrauf/pico_epd_1in54>
+ * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
+ */
+
+#include "epaper.h"
 #include "hardware/spi.h"
 #include "pico/stdlib.h"
-#include "ws2812.h"
-#include "epaper.h"
+#include "config.h"
 
-#if EPAPER_WIDTH % 8 == 0
-#define EPAPER_WIDTH_BYTES (EPAPER_WIDTH / 8)
-#else
-#define EPAPER_WIDTH_BYTES (EPAPER_WIDTH / 8 + 1)
-#endif
+#define EPAPER_LUT_LENGTH 159
+typedef const uint8_t epaper_lut_t[EPAPER_LUT_LENGTH];
 
 // waveform full refresh
-static const unsigned char WAVEFORM_FULL_REFRESH[159] =
+static epaper_lut_t WAVEFORM_FULL_REFRESH =
     {
         0x80, 0x48, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
         0x40, 0x48, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -33,8 +53,8 @@ static const unsigned char WAVEFORM_FULL_REFRESH[159] =
         0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x0, 0x0, 0x0,
         0x22, 0x17, 0x41, 0x0, 0x32, 0x20};
 
-// waveform partial refresh(fast)
-static const unsigned char WAVEFORM_PARTIAL_REFRESH[159] =
+// waveform partial refresh
+static epaper_lut_t WAVEFORM_PARTIAL_REFRESH =
     {
         0x0, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x80,
         0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x40,
@@ -50,6 +70,9 @@ static const unsigned char WAVEFORM_PARTIAL_REFRESH[159] =
         0x0, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x0, 0x0, 0x0, 0x02,
         0x17, 0x41, 0xB0, 0x32, 0x28};
 
+/**
+ * \brief Pulse the reset pin
+ */
 static void epaper_reset(void)
 {
     gpio_put(EPAPER_RST_PIN, 1);
@@ -60,7 +83,10 @@ static void epaper_reset(void)
     sleep_ms(20);
 }
 
-static void epaper_send_command(uint8_t reg)
+/**
+ * \brief Send a command byte
+ */
+static void epaper_send_command(const uint8_t reg)
 {
     gpio_put(EPAPER_DC_PIN, 0);
     gpio_put(EPAPER_CS_PIN, 0);
@@ -68,7 +94,10 @@ static void epaper_send_command(uint8_t reg)
     gpio_put(EPAPER_CS_PIN, 1);
 }
 
-static void epaper_send_data(uint8_t data)
+/**
+ * \brief Send a data byte
+ */
+static void epaper_send_data(const uint8_t data)
 {
     gpio_put(EPAPER_DC_PIN, 1);
     gpio_put(EPAPER_CS_PIN, 0);
@@ -76,11 +105,19 @@ static void epaper_send_data(uint8_t data)
     gpio_put(EPAPER_CS_PIN, 1);
 }
 
+/**
+ * \brief Check if the display is busy
+ * \return True if busy, false otherwise
+ */
 bool epaper_is_busy(void)
 {
     return gpio_get(EPAPER_BUSY_PIN);
 }
 
+/**
+ * \brief Blocking wait until the display is not busy
+ * \warning BAD
+ */
 static void epaper_wait_busy(void)
 {
     while (epaper_is_busy())
@@ -89,8 +126,11 @@ static void epaper_wait_busy(void)
     }
 }
 
-// Partial must be True when using partial refresh
-static void epaper_turn_on_display(bool partial)
+/**
+ * \brief Signal the display to refresh
+ * \param partial Whether the display is in partial mode. Must be True when using partial refresh
+ */
+static void epaper_turn_on_display(const bool partial)
 {
     epaper_send_command(0x22);
     epaper_send_data(partial ? 0xcF : 0xc7);
@@ -98,31 +138,38 @@ static void epaper_turn_on_display(bool partial)
     epaper_wait_busy();
 }
 
-static void epaper_send_look_up_table(const uint8_t *lut)
+/**
+ * \brief Send a new LUT to the display
+ * \param lut Pointer to the LUT array
+ */
+static void epaper_send_look_up_table(epaper_lut_t lut)
 {
     // Send LUT
     epaper_send_command(0x32);
-    for (uint8_t i = 0; i < 153; i++)
+    for (uint8_t i = 0; i < EPAPER_LUT_LENGTH - 6; i++)
         epaper_send_data(lut[i]);
     epaper_wait_busy();
 
     // Select LUT
     epaper_send_command(0x3f);
-    epaper_send_data(lut[153]);
+    epaper_send_data(lut[EPAPER_LUT_LENGTH - 6]);
 
     epaper_send_command(0x03);
-    epaper_send_data(lut[154]);
+    epaper_send_data(lut[EPAPER_LUT_LENGTH - 5]);
 
     epaper_send_command(0x04);
-    epaper_send_data(lut[155]);
-    epaper_send_data(lut[156]);
-    epaper_send_data(lut[157]);
+    epaper_send_data(lut[EPAPER_LUT_LENGTH - 4]);
+    epaper_send_data(lut[EPAPER_LUT_LENGTH - 3]);
+    epaper_send_data(lut[EPAPER_LUT_LENGTH - 2]);
 
     epaper_send_command(0x2c);
-    epaper_send_data(lut[158]);
+    epaper_send_data(lut[EPAPER_LUT_LENGTH - 1]);
 }
 
-static void epaper_set_windows(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end)
+/**
+ * \brief Tell the display to only refresh within the area from (x_start, y_start) to (x_end, y_end)
+ */
+static void epaper_set_windows(const uint16_t x_start, const uint16_t y_start, const uint16_t x_end, const uint16_t y_end)
 {
     epaper_send_command(0x44); // SET_RAM_X_ADDRESS_START_END_POSITION
     epaper_send_data((x_start >> 3) & 0xFF);
@@ -135,7 +182,10 @@ static void epaper_set_windows(uint16_t x_start, uint16_t y_start, uint16_t x_en
     epaper_send_data((y_end >> 8) & 0xFF);
 }
 
-static void epaper_set_cursor(uint16_t x_start, uint16_t y_start)
+/**
+ * \brief TODO idk
+ */
+static void epaper_set_cursor(const uint16_t x_start, const uint16_t y_start)
 {
     epaper_send_command(0x4E); // SET_RAM_X_ADDRESS_COUNTER
     epaper_send_data(x_start & 0xFF);
@@ -145,7 +195,10 @@ static void epaper_set_cursor(uint16_t x_start, uint16_t y_start)
     epaper_send_data((y_start >> 8) & 0xFF);
 }
 
-static void epaper_set_gpio_mode(uint16_t pin, enum gpio_dir mode)
+/**
+ * \brief Initialise a gpio pin and set it's direction
+ */
+static void epaper_set_gpio_mode(const uint16_t pin, const enum gpio_dir mode)
 {
     gpio_init(pin);
     if (mode == GPIO_IN)
@@ -158,6 +211,9 @@ static void epaper_set_gpio_mode(uint16_t pin, enum gpio_dir mode)
     }
 }
 
+/**
+ * \brief Setup the epaper display
+ */
 void epaper_init(void)
 {
     stdio_init_all();
@@ -214,7 +270,9 @@ void epaper_init(void)
     epaper_send_look_up_table(WAVEFORM_FULL_REFRESH);
 }
 
-// Enter partial display mode
+/**
+ * \brief Enter partial display mode
+ */
 void epaper_partial_init(void)
 {
     epaper_reset();
@@ -242,7 +300,10 @@ void epaper_partial_init(void)
     epaper_wait_busy();
 }
 
-void epaper_clear(uint16_t color)
+/**
+ * \brief Immediately fill the display with the specified color and refresh
+ */
+void epaper_clear(const uint16_t color)
 {
     epaper_send_command(0x24);
     for (uint16_t j = 0; j < EPAPER_HEIGHT; j++)
@@ -263,8 +324,11 @@ void epaper_clear(uint16_t color)
     epaper_turn_on_display(false);
 }
 
-// Send an image buffer and display it. Partial must be True when using partial refresh
-void epaper_display(uint8_t *image, bool partial)
+/**
+ * \brief Send an image buffer to the display, and display it
+ * \param partial Whether the display is in partial mode. Must be True when using partial refresh
+ */
+void epaper_display(const uint8_t *image, const bool partial)
 {
     uint32_t address = 0;
     epaper_send_command(0x24);
@@ -281,8 +345,10 @@ void epaper_display(uint8_t *image, bool partial)
     epaper_turn_on_display(partial);
 }
 
-// The image of the previous frame must be uploaded, otherwise the first few seconds will display an exception.
-void epaper_partial_upload_base_image(uint8_t *image)
+/**
+ * \brief Upload the image of the previous frame, otherwise the first few seconds will display an exception
+ */
+void epaper_partial_upload_base_image(const uint8_t *image)
 {
     uint32_t address = 0;
     epaper_send_command(0x24);
@@ -306,7 +372,9 @@ void epaper_partial_upload_base_image(uint8_t *image)
     epaper_turn_on_display(true);
 }
 
-// Enter sleep mode
+/**
+ * \brief Enter sleep mode
+ */
 void epaper_sleep(void)
 {
     epaper_send_command(0x10); // enter deep sleep

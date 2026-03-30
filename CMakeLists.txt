@@ -20,7 +20,7 @@ pico_sdk_init()
 
 # add a header directory
 include_directories(src)
-include_directories(./lib/GUI)
+include_directories(./lib/gui)
 include_directories(./lib/ePaper)
 include_directories(./lib/ws2812)
 include_directories(./lib/TinyUSB)
@@ -28,7 +28,7 @@ include_directories(./lib/TinyUSB)
 # add a compilation subdirectory
 add_subdirectory(lib/ePaper)
 add_subdirectory(lib/fonts)
-add_subdirectory(lib/GUI)
+add_subdirectory(lib/gui)
 add_subdirectory(lib/ws2812)
 add_subdirectory(lib/TinyUSB)
 
@@ -48,7 +48,7 @@ target_link_libraries(${PROJECT_NAME}
     TinyUSB
 
     ePaper
-    GUI
+    gui
     fonts
 
     ws2812

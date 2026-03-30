@@ -1,8 +1,27 @@
-// Inspired by https://www.1001fonts.com/tinier-font.html 2012 by Matthew Welch
+/**
+ * mReader is a micro e-reader
+ * Copyright (C) 2026  Alice Jacka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
+ * Inspired by <https://www.1001fonts.com/tinier-font.html> 2012 by Matthew Welch
+ */
 
 #include "fonts.h"
 
-const font_character_t font4_characters[] =
+font_character_array_t font4_characters =
     {
 // 0x20 Space
 #ifdef ANGEL_KISSES
@@ -627,7 +646,7 @@ const font_character_t font4_characters[] =
 font_t font4 =
     {
         font4_characters,
-        4, // Height
+        4, // height
         1, // Character spacing
         1, // Line spacing
 };
