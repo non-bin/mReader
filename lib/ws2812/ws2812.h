@@ -29,10 +29,10 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
- #include <stdint.h>
+#include <stdint.h>
 
-#ifndef WS2812_H
-#define WS2812_H
+#ifndef __WS2812_H
+#define __WS2812_H
 
 #define LED_RED 255, 0, 0
 #define LED_YELLOW 255, 255, 0
@@ -47,4 +47,4 @@ void ws2812_init(unsigned int pin);
 void ws2812_deinit();
 void put_pixel(uint8_t r, uint8_t g, uint8_t b);
 
-#endif
+#endif /* __WS2812_H */

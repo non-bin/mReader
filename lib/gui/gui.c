@@ -25,8 +25,8 @@
 #include "config.h"
 #include "gui.h"
 #include "epaper.h"
-#include <stdlib.h>
-#include <string.h>
+#include <stdlib.h> // malloc
+#include <string.h> // strchr
 
 image_buffer_info_t image_buffer_info;
 

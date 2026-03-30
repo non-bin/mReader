@@ -80,12 +80,15 @@
 // LED //
 /////////
 
-#define LED_PIN 16
 #define LED_BRIGHTNESS_PERCENT 12
+
+#define LED_PIN 16
 
 /////////////
 // Buttons //
 /////////////
+
+#define BUTTON_DEFAULT_ACTIONS {BUTTON_NEXT, BUTTON_ENTER, BUTTON_BACK, BUTTON_PREVIOUS}
 
 #define BUTTON_0_PIN 0
 #define BUTTON_1_PIN 2

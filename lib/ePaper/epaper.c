@@ -24,7 +24,7 @@
 
 #include "epaper.h"
 #include "hardware/spi.h"
-#include "pico/stdlib.h"
+#include "pico/stdlib.h" // GPIO
 #include "config.h"
 
 #define EPAPER_LUT_LENGTH 159

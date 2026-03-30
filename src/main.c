@@ -19,12 +19,10 @@
  */
 
 #include "config.h"
+#include "main.h"
 
-#include <stdlib.h>
-
-#include "pico/stdlib.h"
-#include "pico/bootrom.h"
-#include "hardware/pio.h"
+#include <stdlib.h>       // itoa
+#include "pico/bootrom.h" // rom_reset_usb_boot_extra
 #include "hardware/gpio.h"
 
 #include "tusb.h"
@@ -33,37 +31,10 @@
 #include "epaper.h"
 #include "gui.h"
 
+button_action_t button_actions[4] = BUTTON_DEFAULT_ACTIONS;
 absolute_time_t last_screen_update = {0};
-absolute_time_t last_gpio_event_time[8] = {0};
-bool button_pressed[8] = {false};
-
-typedef enum
-{
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
-
-button_action_t button_actions[4] = {BUTTON_NEXT, BUTTON_ENTER, BUTTON_BACK, BUTTON_PREVIOUS};
-
-typedef enum
-{
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
-
-typedef struct
-{
-  uint64_t scroll;
-  page_t current_page;
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
+absolute_time_t last_gpio_event_time[4] = {0};
+bool button_pressed[4] = {false};
 
 state_t state = {
     .scroll = 0,
@@ -79,25 +50,32 @@ uint8_t *image_buffer;
 bool screen_update_scheduled = true;
 absolute_time_t now = {0};
 
-char text_buffer_1[EPAPER_IMAGE_SIZE]; // Can store enough text to fill the entire screen with 1px font
-char text_buffer_2[EPAPER_IMAGE_SIZE];
+char text_buffer_1[EPAPER_WIDTH * EPAPER_HEIGHT]; // Can store enough text to fill the entire screen with 1px font
+char text_buffer_2[EPAPER_WIDTH * EPAPER_HEIGHT];
 
-extern volatile bool g_usb_just_unmounted;
-extern volatile bool g_usb_mounted;
+extern volatile bool usb_just_unmounted;
+extern volatile bool usb_mounted;
 
-void read_book(uint64_t offset)
+/**
+ * \brief Read a book from flash, starting from character number `offset`
+ */
+void read_book(const uint64_t offset)
 {
   msc_file_info_t files[10];
-  int count = msc_disk_get_file_list(files, 10);
+  const int count = msc_disk_get_file_list(files, 10);
 
   if (count > 0)
   {
-    int read_len = msc_disk_read_file(files[0].start_cluster, files[0].size, (uint8_t *)text_buffer_1, sizeof(text_buffer_1) - 1, offset);
+    const int read_len = msc_disk_read_file(files[0].start_cluster, files[0].size, (uint8_t *)text_buffer_1, sizeof(text_buffer_1) - 1, offset);
     text_buffer_1[read_len] = '\0';
   }
   return;
 }
 
+/**
+ * \brief Attempt a screen update
+ * \return true if the update was successful, false otherwise
+ */
 bool update_screen()
 {
   if (epaper_is_busy())
@@ -133,7 +111,10 @@ bool update_screen()
   return true;
 }
 
-void gpio_callback(uint gpio, uint32_t events)
+/**
+ * \brief Run when a button is pressed
+ */
+void gpio_callback(const uint pin_number, const unsigned long events)
 {
   if ((events & GPIO_IRQ_EDGE_RISE) && (events & GPIO_IRQ_EDGE_FALL))
   {
@@ -142,31 +123,31 @@ void gpio_callback(uint gpio, uint32_t events)
 
   absolute_time_t now = get_absolute_time();
 
-  if (absolute_time_diff_us(last_gpio_event_time[gpio], now) > DEBOUNCE_TIME_MS * 1000)
+  // Map GPIO to button number with BUTTON_X_PIN
+  button_action_t button_action = BUTTON_NEXT; // Default action, will be overridden
+  switch (pin_number)
   {
-    if (events & GPIO_IRQ_EDGE_RISE && !button_pressed[gpio])
-    {
-      button_pressed[gpio] = true;
+  case BUTTON_0_PIN:
+    button_action = button_actions[0];
+    break;
+  case BUTTON_1_PIN:
+    button_action = button_actions[1];
+    break;
+  case BUTTON_2_PIN:
+    button_action = button_actions[2];
+    break;
+  case BUTTON_3_PIN:
+    button_action = button_actions[3];
+    break;
+  default:
+    return; // Ignore unrecognized GPIOs
+  }
 
-      // Map GPIO to button number with BUTTON_X_PIN
-      button_action_t button_action = BUTTON_NEXT; // Default action, will be overridden
-      switch (gpio)
-      {
-      case BUTTON_0_PIN:
-        button_action = button_actions[0];
-        break;
-      case BUTTON_1_PIN:
-        button_action = button_actions[1];
-        break;
-      case BUTTON_2_PIN:
-        button_action = button_actions[2];
-        break;
-      case BUTTON_3_PIN:
-        button_action = button_actions[3];
-        break;
-      default:
-        return; // Ignore unrecognized GPIOs
-      }
+  if (absolute_time_diff_us(last_gpio_event_time[button_action], now) > DEBOUNCE_TIME_MS * 1000)
+  {
+    if (events & GPIO_IRQ_EDGE_RISE && !button_pressed[button_action])
+    {
+      button_pressed[button_action] = true;
 
       switch (state.current_page)
       {
@@ -238,13 +219,13 @@ void gpio_callback(uint gpio, uint32_t events)
         break;
       }
     }
-    else if (events & GPIO_IRQ_EDGE_FALL && button_pressed[gpio])
+    else if (events & GPIO_IRQ_EDGE_FALL && button_pressed[button_action])
     {
-      button_pressed[gpio] = false;
+      button_pressed[button_action] = false;
     }
   }
 
-  last_gpio_event_time[gpio] = now;
+  last_gpio_event_time[button_action] = now;
 
   if (state.current_page == PAGE_CATALOG) // Back on the catalog page always goes to settings
   {
@@ -274,8 +255,6 @@ int main()
   epaper_init();
   image_buffer = gui_init(EPAPER_WIDTH, EPAPER_HEIGHT, GUI_ROTATE_270, GUI_BITS_PER_PIXEL_2, GUI_MIRROR_NONE);
 
-  uint16_t color = 1;
-
   while (1)
   {
     /////////
@@ -284,9 +263,9 @@ int main()
 
     tud_task(); // TinyUSB device task
 
-    if (g_usb_just_unmounted)
+    if (usb_just_unmounted)
     {
-      g_usb_just_unmounted = false;
+      usb_just_unmounted = false;
       // text = read_book();
     }
 
@@ -300,12 +279,6 @@ int main()
       if (!update_screen())
         screen_update_scheduled = true; // Schedule another if it failed
     }
-
-    //   gui_draw_fill(state.bg_color);
-    // gui_draw_number(0, 0, offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
-    //   gui_draw_string(0, 4, text + offset, &DEFAULT_FONT, state.fg_color, state.bg_color);
-
-    //   epaper_display(imageCache, false);
   }
 
   // Should be unreachable
