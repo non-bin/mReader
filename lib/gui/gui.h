@@ -22,10 +22,10 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __GUI_H
-#define __GUI_H
+#ifndef __GUI_H_
+#define __GUI_H_
 
-#include "../fonts/fonts.h"
+#include "fonts.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -113,4 +113,4 @@ void gui_draw_circle(const uint16_t x_center, const uint16_t y_center, const uin
 uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const char *string, const font_t *font, const uint16_t foreground_color, const uint16_t background_color);
 uint16_t gui_draw_number(const uint16_t x_point, const uint16_t y_point, const int32_t number, const font_t *font, const uint16_t foreground_color, const uint16_t background_color);
 
-#endif /* __GUI_H */
+#endif /* __GUI_H_ */

@@ -1,6 +1,5 @@
 # Find all source files in a single current directory
 aux_source_directory(. DIR_TinyUSB_SRCS)
-include_directories(.)
 
 # Generate the link library
 add_library(TinyUSB ${DIR_TinyUSB_SRCS})

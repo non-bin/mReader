@@ -18,8 +18,8 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef __CONFIG_H_
+#define __CONFIG_H_
 
 ///////////
 // Debug //
@@ -27,12 +27,17 @@
 
 // #define ANGEL_KISSES
 
+#define DEBUG_LED           // Enable non-halting error codes
+#define DEBUG_LED_ON_MS 300 // Leave these for halting errors
+#define DEBUG_LED_OFF_MS 100
+
 /////////////
 // General //
 /////////////
 
 #define HISTORY_LENGTH 4
 #define SCROLL_SIZE 100
+#define MAX_PATH_LENGTH 512
 
 //////////
 // Text //
@@ -40,6 +45,7 @@
 
 #define DEFAULT_FONT font12
 #define TAB_SIZE 2 // tabWidth = (space.width + characterGap) * TAB_SIZE
+#define WORD_SEPARATORS " \r\n\t&*+-/<=>\\_~"
 
 // Displayed to demo each font size
 // #define FONT_PALLET " !\"#$\%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\b"
@@ -47,9 +53,6 @@
 // #define FONT_PALLET "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
 // #define FONT_PALLET "AaBbCcDdEeFfGgHhIiJjKkLlMm\rNnOoPpQqRrSsTtUuVvWwXxYyZz\r0123456789!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
 #define FONT_PALLET "Aa\rBb\rCc\rDd\rEe\rFf\rGg\rHh\rIi\rJj\rKk\rLl\rMm\rNn\rOo\rPp\rQq\rRr\rSs\rTt\rUu\rVv\rWw\rXx\rYy\rZz\n0123456789\r!\"#$\%&'()*+,-./:;<=>?@[\\]^_`{|}~\b "
-//        ^
-
-#define WORD_SEPARATORS " \r\n\t&*+-/<=>\\_~"
 
 // #define FONT3_WIDE_M
 // #define FONT3_WIDE_N
@@ -102,6 +105,7 @@
 /////////////
 
 #define EPAPER_MODEL "1in54v2"
+#define EPAPER_TIMEOUT_MS (10 * 1000)
 
 #define EPAPER_SPI_PORT spi1
 #define EPAPER_RST_PIN 12
@@ -111,4 +115,15 @@
 #define EPAPER_CLK_PIN 10
 #define EPAPER_MOSI_PIN 11
 
-#endif // CONFIG_H
+/////////////
+// Storage //
+/////////////
+
+// To see how much the binary uses, run `grep flash_binary build/mReader.elf.map`
+// __flash_binary_start should be the same as XIP_BASE
+#define FLASH_FIRMWARE_BYTES (256 * 1024)   // Last check, firmware used 129KiB, plus 127KiB headroom = 256KiB
+#define FLASH_TOTAL_BYTES (2 * 1024 * 1024) // RP2040-Zero has 2 MiB flash
+#define DISK_SIZE_BYTES (FLASH_TOTAL_BYTES - FLASH_FIRMWARE_BYTES)
+#define DISK_BLOCK_SIZE 512 // Fat block size, not flash
+
+#endif /* __CONFIG_H_ */

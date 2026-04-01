@@ -25,6 +25,7 @@
 #include "config.h"
 #include "gui.h"
 #include "epaper.h"
+#include "error.h"
 #include <stdlib.h> // malloc
 #include <string.h> // strchr
 
@@ -78,7 +79,7 @@ void gui_set_rotation(const gui_rotation_t rotation)
         return;
     }
 
-    // TODO debug
+    error(ERROR_GUI_INVALID_ROTATION, false);
 }
 
 /**
@@ -96,7 +97,7 @@ void gui_set_mirror(const gui_mirror_t mirror)
         return;
     }
 
-    // TODO debug
+    error(ERROR_GUI_INVALID_MIRROR, false);
 }
 
 /**
@@ -120,7 +121,10 @@ void gui_set_bits_per_pixel(const gui_bits_per_pixel_t bits_per_pixel)
     }
 
     if (modulo == 0)
-        return; // TODO debug
+    {
+        error(ERROR_GUI_INVALID_BITS_PER_PIXEL, false);
+        return;
+    }
 
     image_buffer_info.bits_per_pixel = bits_per_pixel;
     image_buffer_info.hardware_width_in_bytes = (image_buffer_info.hardware_width % modulo == 0) ? (image_buffer_info.hardware_width / modulo) : (image_buffer_info.hardware_width / modulo + 1);
@@ -133,7 +137,7 @@ static void gui_draw_pixel(uint16_t x_point, uint16_t y_point, uint16_t color)
 {
     if (x_point > image_buffer_info.rotated_width || y_point > image_buffer_info.rotated_height)
     {
-        // TODO debug
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
     }
 
@@ -176,7 +180,7 @@ static void gui_draw_pixel(uint16_t x_point, uint16_t y_point, uint16_t color)
 
     if (x > image_buffer_info.hardware_width || y > image_buffer_info.hardware_height)
     {
-        // TODO debug
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
     }
 
@@ -268,7 +272,7 @@ void gui_draw_point(const uint16_t x_point, const uint16_t y_point, const uint16
 {
     if (x_point > image_buffer_info.rotated_width || y_point > image_buffer_info.rotated_height)
     {
-        // TODO debug
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
     }
 
@@ -306,7 +310,7 @@ void gui_draw_line(const uint16_t x_start, const uint16_t y_start, const uint16_
 {
     if (x_start > image_buffer_info.rotated_width || y_start > image_buffer_info.rotated_height || x_end > image_buffer_info.rotated_width || y_end > image_buffer_info.rotated_height)
     {
-        // TODO debug
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
     }
 
@@ -361,7 +365,7 @@ void gui_draw_rectangle(const uint16_t x_start, const uint16_t y_start, const ui
     if (x_start > image_buffer_info.rotated_width || y_start > image_buffer_info.rotated_height ||
         x_end > image_buffer_info.rotated_width || y_end > image_buffer_info.rotated_height)
     {
-        // TODO debug
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
     }
 
@@ -387,11 +391,12 @@ void gui_draw_rectangle(const uint16_t x_start, const uint16_t y_start, const ui
  */
 void gui_draw_circle(const uint16_t x_center, const uint16_t y_center, const uint16_t radius, const uint16_t color, const gui_dot_size_t line_width, const bool fill)
 {
-    if (x_center > image_buffer_info.rotated_width || y_center >= image_buffer_info.rotated_height)
-    {
-        // TODO debug
-        return;
-    }
+    // // I might want to draw circles centered outside the screen
+    // if (x_center > image_buffer_info.rotated_width || y_center >= image_buffer_info.rotated_height)
+    // {
+    //     error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
+    //     return;
+    // }
 
     uint16_t x = 0;
     uint16_t y = (uint16_t)radius;
@@ -456,7 +461,7 @@ static void gui_draw_character(const uint16_t x_point, const uint16_t y_point, c
     const font_character_t character = font->characters[ascii_character - FONT_START_CHARACTER];
     if ((x_point + character.width) > image_buffer_info.rotated_width || (y_point + font->height) > image_buffer_info.rotated_height)
     {
-        // TODO debug
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
     }
 
@@ -522,8 +527,8 @@ uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const c
 
     if (x_start > image_buffer_info.rotated_width || y_start > image_buffer_info.rotated_height)
     {
-        // TODO debug
-        return image_buffer_info.rotated_height;
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
+        return image_buffer_info.rotated_height; // TODO return a bool and update y_start via pointer
     }
 
     char word[UINT16_MAX] = {0};
@@ -595,7 +600,7 @@ uint16_t gui_draw_number(const uint16_t x_point, const uint16_t y_point, const i
 
     if (x_point > image_buffer_info.rotated_width || y_point > image_buffer_info.rotated_height)
     {
-        // Debug("Paint_DisNum Input exceeds the normal display range\r\n");
+        error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return image_buffer_info.rotated_width;
     }
 

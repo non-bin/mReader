@@ -1,6 +1,8 @@
 #include "tusb.h"
 #include <stdbool.h>
 
+#include "tinyusb.h"
+
 volatile bool usb_mounted = false;
 volatile bool usb_just_unmounted = false;
 

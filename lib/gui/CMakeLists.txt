@@ -3,7 +3,8 @@
 aux_source_directory(. DIR_gui_SRCS)
 
 include_directories(../fonts)
+include_directories(../error)
 
 # Generate the link library
 add_library(gui ${DIR_gui_SRCS})
-target_link_libraries(gui PUBLIC fonts)
+target_link_libraries(gui PUBLIC fonts error)

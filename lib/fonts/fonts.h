@@ -18,8 +18,8 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __FONTS_H
-#define __FONTS_H
+#ifndef __FONTS_H_
+#define __FONTS_H_
 
 #define FONT_START_CHARACTER ' '
 #define FONT_END_CHARACTER '~'
@@ -73,4 +73,4 @@ extern font_t font20;
 #define FONT_COUNT 9
 extern font_t *const fonts[FONT_COUNT];
 
-#endif /* __FONTS_H */
+#endif /* __FONTS_H_ */

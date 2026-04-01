@@ -75,7 +75,8 @@
     ],
     "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
         "cppcoreguidelines-avoid-*",
-        "cppcoreguidelines-macro-to-enum"
+        "cppcoreguidelines-macro-to-enum",
+        "cppcoreguidelines-macro-usage"
     ],
     "C_Cpp.codeAnalysis.clangTidy.enabled": true,
     "C_Cpp.codeAnalysis.clangTidy.args": [

@@ -2,6 +2,7 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PICO_SDK_PATH=/pico/pico-sdk
+ENV FATFS_PATH=/pico/fatfs/source
 ARG USERNAME
 
 USER root

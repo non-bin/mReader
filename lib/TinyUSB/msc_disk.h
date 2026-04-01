@@ -1,12 +1,9 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include "config.h"
 
-#define DISK_BLOCK_SIZE 512u
-#define DISK_SIZE_BYTES (1u * 1024u * 1024u)
 #define DISK_BLOCK_COUNT (DISK_SIZE_BYTES / DISK_BLOCK_SIZE)
-
-#define FLASH_TOTAL_BYTES (2u * 1024u * 1024u) // RP2040-Zero stated 2 MiB flash
 #define DISK_FLASH_OFFSET (FLASH_TOTAL_BYTES - DISK_SIZE_BYTES)
 
 bool msc_disk_lazy_format_fat16(void);

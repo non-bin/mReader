@@ -18,36 +18,12 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __MAIN_H_
-#define __MAIN_H_
+#ifndef __FLASH_H_
+#define __FLASH_H_
 
-#include <stdint.h>
+#include "config.h"
 
-typedef enum
-{
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
+#define DISK_FLASH_OFFSET (FLASH_TOTAL_BYTES - DISK_SIZE_BYTES)
+#define DISK_BLOCK_COUNT (DISK_SIZE_BYTES / DISK_BLOCK_SIZE)
 
-typedef enum
-{
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
-
-typedef struct
-{
-  uint64_t scroll;
-  page_t current_page;
-  char current_book[MAX_PATH_LENGTH];
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
-#endif /* __MAIN_H_ */
+#endif /* __FLASH_H_ */

@@ -18,36 +18,45 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __MAIN_H_
-#define __MAIN_H_
+#include "error.h"
+#include "config.h"
+#include "ws2812.h"
+#include "pico/stdlib.h" // sleep
 
-#include <stdint.h>
-
-typedef enum
+// TODO make an async version
+void flash_code(error_t error, uint8_t r0, uint8_t g0, uint8_t b0, uint8_t r1, uint8_t g1, uint8_t b1)
 {
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
+  if ((error) & (1 << 7))
+    put_pixel(r1, g1, b1);
+  else
+    put_pixel(r0, g0, b0);
+  sleep_ms(DEBUG_LED_ON_MS);
 
-typedef enum
+  for (char i = 1; i < 8; i++)
+  {
+    put_pixel(LED_OFF);
+    sleep_ms(DEBUG_LED_OFF_MS);
+
+    if ((error << i) & (1 << 7))
+      put_pixel(r1, g1, b1);
+    else
+      put_pixel(r0, g0, b0);
+    sleep_ms(DEBUG_LED_ON_MS);
+  }
+
+  put_pixel(LED_OFF);
+}
+
+void error(error_t error, bool halt)
 {
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
+#ifndef DEBUG_LED
+  if (halt)
+#endif
+    flash_code(error, LED_RED, LED_PURPLE);
 
-typedef struct
-{
-  uint64_t scroll;
-  page_t current_page;
-  char current_book[MAX_PATH_LENGTH];
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
-#endif /* __MAIN_H_ */
+  while (halt)
+  {
+    sleep_ms(1000);
+    flash_code(error, LED_RED, LED_PURPLE);
+  }
+}
