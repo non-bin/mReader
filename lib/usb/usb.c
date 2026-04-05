@@ -18,37 +18,14 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __MAIN_H_
-#define __MAIN_H_
+#include "tusb.h"
 
-#include <stdint.h>
-
-typedef enum
+void usb_init()
 {
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
+  tusb_init();
+}
 
-typedef enum
+void usb_task()
 {
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
-
-typedef struct
-{
-  page_t page;
-  uint64_t scroll;
-  char book[MAX_PATH_LENGTH];
-  uint64_t book_scroll;
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
-#endif /* __MAIN_H_ */
+  tud_task();
+}

@@ -29,7 +29,7 @@
 /  Configurations of FatFs Module
 /---------------------------------------------------------------------------*/
 
-#define FF_CONF_REVISION_ID 80386 /* Revision ID */
+#define FFCONF_DEF 80386 /* Revision ID */
 
 /*---------------------------------------------------------------------------/
 / Function Configurations

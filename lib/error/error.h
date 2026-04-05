@@ -23,6 +23,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "ws2812.h"
 
 // Codes are flashed MSB to LSB, red is 0 yellow is 1
 typedef enum
@@ -47,9 +48,13 @@ typedef enum
   ERROR_FATFS_CLOSEDIR = 0x45,
   ERROR_FATFS_OPEN = 0x46,
   ERROR_FATFS_LSEEK = 0x47,
+  ERROR_FATFS_GETFREE = 0x48,
+
+  ERROR_CACHE_EARLY_FLUSH = 0x50,
+  ERROR_CACHE_OOM = 0x51,
 } error_t;
 
-void flash_code(error_t error, uint8_t r0, uint8_t g0, uint8_t b0, uint8_t r1, uint8_t g1, uint8_t b1);
+void flash_code(error_t error, uint8_t r0, uint8_t g0, uint8_t b0, uint8_t r1, uint8_t g1, uint8_t b1, uint8_t binary_length);
 void error(error_t error, bool halt);
 
 #endif /* __ERROR_H_ */

@@ -18,6 +18,6 @@ flash:
 
 .PHONY: clean
 clean:
-	rm -rf build lib/ws2812/generated
+	rm -rf build
 
 buildAndFlash: build flash

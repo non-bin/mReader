@@ -135,7 +135,7 @@ void gui_set_bits_per_pixel(const gui_bits_per_pixel_t bits_per_pixel)
  */
 static void gui_draw_pixel(uint16_t x_point, uint16_t y_point, uint16_t color)
 {
-    if (x_point > image_buffer_info.rotated_width || y_point > image_buffer_info.rotated_height)
+    if (x_point >= image_buffer_info.rotated_width || y_point >= image_buffer_info.rotated_height)
     {
         error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
@@ -178,7 +178,7 @@ static void gui_draw_pixel(uint16_t x_point, uint16_t y_point, uint16_t color)
         break;
     }
 
-    if (x > image_buffer_info.hardware_width || y > image_buffer_info.hardware_height)
+    if (x >= image_buffer_info.hardware_width || y >= image_buffer_info.hardware_height)
     {
         error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
@@ -308,7 +308,7 @@ void gui_draw_point(const uint16_t x_point, const uint16_t y_point, const uint16
  */
 void gui_draw_line(const uint16_t x_start, const uint16_t y_start, const uint16_t x_end, const uint16_t y_end, const uint16_t color, const gui_dot_size_t line_width, const bool dotted)
 {
-    if (x_start > image_buffer_info.rotated_width || y_start > image_buffer_info.rotated_height || x_end > image_buffer_info.rotated_width || y_end > image_buffer_info.rotated_height)
+    if (x_start >= image_buffer_info.rotated_width || y_start >= image_buffer_info.rotated_height || x_end >= image_buffer_info.rotated_width || y_end >= image_buffer_info.rotated_height)
     {
         error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
@@ -362,8 +362,8 @@ void gui_draw_line(const uint16_t x_start, const uint16_t y_start, const uint16_
  */
 void gui_draw_rectangle(const uint16_t x_start, const uint16_t y_start, const uint16_t x_end, const uint16_t y_end, const uint16_t color, const gui_dot_size_t line_width, const bool fill)
 {
-    if (x_start > image_buffer_info.rotated_width || y_start > image_buffer_info.rotated_height ||
-        x_end > image_buffer_info.rotated_width || y_end > image_buffer_info.rotated_height)
+    if (x_start >= image_buffer_info.rotated_width || y_start >= image_buffer_info.rotated_height ||
+        x_end >= image_buffer_info.rotated_width || y_end >= image_buffer_info.rotated_height)
     {
         error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return;
@@ -525,13 +525,14 @@ uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const c
     uint16_t x_point = x_start;
     uint16_t y_point = y_start;
 
-    if (x_start > image_buffer_info.rotated_width || y_start > image_buffer_info.rotated_height)
+    if (x_start >= image_buffer_info.rotated_width || y_start >= image_buffer_info.rotated_height)
     {
         error(ERROR_GUI_DRAW_OUT_OF_BOUNDS, false);
         return image_buffer_info.rotated_height; // TODO return a bool and update y_start via pointer
     }
 
-    char word[UINT16_MAX] = {0};
+    #define MAX_WORD_LENGTH 256
+    char word[MAX_WORD_LENGTH] = {0};
     uint16_t word_length = 0;
     uint16_t word_width = -font->character_spacing; // The width of the word, initialized to -character_spacing to offset the first character's character_spacing
 
@@ -540,7 +541,7 @@ uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const c
         if (*string == '\n') // Newline
         {
             x_point = x_start;
-            y_point += font->height + font->line_spacing;
+            y_point += font->height + (font->line_spacing > 0 ? font->line_spacing * NEW_LINE_SPACING_MULTIPLIER : NEW_LINE_SPACING_MULTIPLIER);
         }
         else if (*string == '\r') // Carriage return (works as a zero width space)
         {
@@ -559,7 +560,7 @@ uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const c
         string++;
 
         // If char is in WORD_SEPARATORS, clear the word buffer and print the word
-        if (strchr(WORD_SEPARATORS, *string) || word_length >= UINT16_MAX - 1)
+        if (strchr(WORD_SEPARATORS, *string) || word_length >= MAX_WORD_LENGTH - 1)
         {
             if (word_length > 0)
             {

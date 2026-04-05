@@ -18,37 +18,15 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __MAIN_H_
-#define __MAIN_H_
+#ifndef __TUSB_CONFIG_H_
+#define __TUSB_CONFIG_H_
 
-#include <stdint.h>
+#define CFG_TUSB_MCU OPT_MCU_RP2040 // MCU Family
 
-typedef enum
-{
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
+#define CFG_TUSB_RHPORT0_MODE OPT_MODE_DEVICE // Set "Root hub port 0" to be a device
+#define CFG_TUD_ENDPOINT0_SIZE 64             // Set "Root hub port 0" packet size. (64 is the default for full speed)
 
-typedef enum
-{
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
+#define CFG_TUD_MSC 1             // Enable Mass Storage Class
+#define CFG_TUD_MSC_EP_BUFSIZE 64 // Set the endpoint buffer size used by the MSC class for its bulk endpoints (64 is the default for full speed)
 
-typedef struct
-{
-  page_t page;
-  uint64_t scroll;
-  char book[MAX_PATH_LENGTH];
-  uint64_t book_scroll;
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
-#endif /* __MAIN_H_ */
+#endif /* __TUSB_CONFIG_H_ */

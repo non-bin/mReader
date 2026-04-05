@@ -1,4 +1,6 @@
 /**
+ * \brief Low level disk interface module
+ *
  * mReader is a micro e-reader
  * Copyright (C) 2026  Alice Jacka
  *
@@ -15,40 +17,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
+ * \copyright 2025 by ChaN <https://elm-chan.org/fsw/ff/>
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __MAIN_H_
-#define __MAIN_H_
+#ifndef __FLASH_H_
+#define __FLASH_H_
 
-#include <stdint.h>
+#include "config.h"
 
-typedef enum
-{
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
+#define DISK_FLASH_OFFSET (FLASH_TOTAL_BYTES - DISK_SIZE_BYTES)
+#define DISK_BLOCK_COUNT (DISK_SIZE_BYTES / DISK_BLOCK_SIZE)
 
-typedef enum
-{
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
+void flash_init();
+void flash_sync();
+uint32_t flash_read(uint8_t *output_buffer, const uint32_t disk_block, const uint32_t disk_blocks_to_read);
+void flash_write(const uint8_t *input_buffer, const uint32_t disk_block);
 
-typedef struct
-{
-  page_t page;
-  uint64_t scroll;
-  char book[MAX_PATH_LENGTH];
-  uint64_t book_scroll;
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
-#endif /* __MAIN_H_ */
+#endif /* __FLASH_H_ */

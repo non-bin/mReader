@@ -35,6 +35,8 @@
 // General //
 /////////////
 
+#define VERSION_STRING "v0.0.0" // eg "v2.14.3"
+#define VERSION_BCD 0x0000      // eg 0x2143
 #define HISTORY_LENGTH 4
 #define SCROLL_SIZE 100
 #define MAX_PATH_LENGTH 512
@@ -46,6 +48,9 @@
 #define DEFAULT_FONT font12
 #define TAB_SIZE 2 // tabWidth = (space.width + characterGap) * TAB_SIZE
 #define WORD_SEPARATORS " \r\n\t&*+-/<=>\\_~"
+#define NEW_LINE_SPACING_MULTIPLIER 2
+
+// #define FORMAT_DATA_INCLUDE_IB // Whether to include "iB" after data sizes, e.g. "1.2MiB" instead of "1.2M"
 
 // Displayed to demo each font size
 // #define FONT_PALLET " !\"#$\%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\b"
@@ -119,11 +124,21 @@
 // Storage //
 /////////////
 
+// Onboard flash
 // To see how much the binary uses, run `grep flash_binary build/mReader.elf.map`
 // __flash_binary_start should be the same as XIP_BASE
 #define FLASH_FIRMWARE_BYTES (256 * 1024)   // Last check, firmware used 129KiB, plus 127KiB headroom = 256KiB
 #define FLASH_TOTAL_BYTES (2 * 1024 * 1024) // RP2040-Zero has 2 MiB flash
+
+// Fat disk
+#define DISK_BLOCK_SIZE 512
 #define DISK_SIZE_BYTES (FLASH_TOTAL_BYTES - FLASH_FIRMWARE_BYTES)
-#define DISK_BLOCK_SIZE 512 // Fat block size, not flash
+
+/////////
+// USB //
+/////////
+
+#define USB_VID 0xCafe // Vendor ID TODO change these
+#define USB_PID 0x4005 // Product ID
 
 #endif /* __CONFIG_H_ */

@@ -22,17 +22,19 @@
 #include "main.h"
 
 #include <stdlib.h>       // itoa
+#include <stdio.h>        // snprintf
 #include "pico/bootrom.h" // rom_reset_usb_boot_extra
+#include "pico/stdlib.h"  // sleep
 #include "hardware/gpio.h"
 
 #include "error.h"
 #include "ff.h"
-#include "tusb.h"
-#include "tinyusb.h"
-#include "msc_disk.h"
+#include "usb.h"
 #include "ws2812.h"
 #include "epaper.h"
 #include "gui.h"
+
+#include "welcome.h"
 
 FATFS fatfs_work_area;
 
@@ -42,9 +44,10 @@ absolute_time_t last_gpio_event_time[4] = {0};
 bool button_pressed[4] = {false};
 
 state_t state = {
+    .page = PAGE_CATALOG,
     .scroll = 0,
-    .current_book = "",
-    .current_page = PAGE_CATALOG,
+    .book = "",
+    .book_scroll = 0,
     .history = {PAGE_FONT_SIZE},
     .history_index = 0,
     .font_index = 5,
@@ -59,6 +62,52 @@ absolute_time_t now = {0};
 char text_buffer_1[EPAPER_WIDTH * EPAPER_HEIGHT]; // Can store enough text to fill the entire screen with 1px font
 char text_buffer_2[EPAPER_WIDTH * EPAPER_HEIGHT];
 
+#ifdef FORMAT_DATA_INCLUDE_IB
+#define FORMAT_DATA_IB "iB"
+#else
+#define FORMAT_DATA_IB ""
+#endif
+
+/**
+ * \brief Format a data size in bytes, into a human readable string with units, e.g. "1.2M"
+ * \param output Buffer to write the string into
+ * \param input Data size in bytes
+ * \param length Length of the output buffer
+ * \return Pointer to the output buffer
+ */
+char *format_data_size(char *output, uint32_t input, size_t length)
+{
+  if (input < 1024)
+  {
+    snprintf(output, length, "%uB", (unsigned int)input);
+    return output;
+  }
+  else if (input < 1024 * 1024)
+  {
+    uint32_t whole = input / 1024;
+    uint32_t tenths = ((input % 1024) * 10 + 512) / 1024;
+    if (tenths >= 10)
+    {
+      whole++;
+      tenths -= 10;
+    }
+    snprintf(output, length, "%lu.%luK" FORMAT_DATA_IB, (unsigned long)whole, (unsigned long)tenths);
+    return output;
+  }
+  else
+  {
+    uint32_t whole = input / (1024 * 1024);
+    uint32_t tenths = ((input % (1024 * 1024)) * 10 + 524288) / (1024 * 1024);
+    if (tenths >= 10)
+    {
+      whole++;
+      tenths -= 10;
+    }
+    snprintf(output, length, "%lu.%luM" FORMAT_DATA_IB, (unsigned long)whole, (unsigned long)tenths);
+    return output;
+  }
+}
+
 /**
  * \brief Attempt a screen update
  * \return true if the update was successful, false otherwise
@@ -72,7 +121,7 @@ bool update_screen()
 
   uint16_t cursor_y = 0;
 
-  switch (state.current_page)
+  switch (state.page)
   {
   case PAGE_CATALOG:
   {
@@ -106,19 +155,47 @@ bool update_screen()
       {
         if (i == state.scroll)
         {
-          strlcpy(state.current_book, file.fname, sizeof(state.current_book));
-          strlcpy(text_buffer_1, "> ", sizeof(text_buffer_1));
+          strlcpy(state.book, file.fname, sizeof(state.book));
+          strlcpy(text_buffer_1, ">", sizeof(text_buffer_1));
         }
         else
-          strlcpy(text_buffer_1, "  ", sizeof(text_buffer_1));
-        itoa((int)file.fsize, text_buffer_2, 10);
+          strlcpy(text_buffer_1, " ", sizeof(text_buffer_1));
+        format_data_size(text_buffer_2, file.fsize, sizeof(text_buffer_2));
         strlcat(text_buffer_1, text_buffer_2, sizeof(text_buffer_1));
-        strlcat(text_buffer_1, "b ", sizeof(text_buffer_1));
-        strlcat(text_buffer_1, file.fname, sizeof(text_buffer_1));
+        strlcat(text_buffer_1, " ", sizeof(text_buffer_1));
+        char file_name[256];
+        strlcpy(file_name, file.fname, sizeof(file_name));
+        strrchr(file_name, '.')[0] = 0; // Remove file extension for display
+        strlcat(text_buffer_1, file_name, sizeof(text_buffer_1));
 
         cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, state.fg_color, state.bg_color);
       }
+      else if (i == state.scroll)
+        state.scroll++; // Skip directories
     }
+
+    FATFS *fs = {0};
+    uint32_t free_clusters = 0;
+
+    fatfs_result = f_getfree("", &free_clusters, &fs);
+    if (fatfs_result != FR_OK)
+    {
+      error(ERROR_FATFS_GETFREE, false);
+      return false;
+    }
+
+    cursor_y = gui_draw_string(0, cursor_y, "", &DEFAULT_FONT, state.fg_color, state.bg_color); // New line
+
+    format_data_size(text_buffer_1, (fs->n_fatent - 2 - free_clusters) * fs->csize * DISK_BLOCK_SIZE, sizeof(text_buffer_1));
+    strlcat(text_buffer_1, "/", sizeof(text_buffer_1));
+    format_data_size(text_buffer_2, fs->n_fatent * fs->csize * DISK_BLOCK_SIZE, sizeof(text_buffer_2));
+    strlcat(text_buffer_1, text_buffer_2, sizeof(text_buffer_1));
+    strlcat(text_buffer_1, " Used. ", sizeof(text_buffer_1));
+    format_data_size(text_buffer_2, free_clusters * fs->csize * DISK_BLOCK_SIZE, sizeof(text_buffer_2));
+    strlcat(text_buffer_1, text_buffer_2, sizeof(text_buffer_1));
+    strlcat(text_buffer_1, " Free", sizeof(text_buffer_1));
+
+    cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, state.fg_color, state.bg_color);
 
     fatfs_result = f_closedir(&root_directory);
     if (fatfs_result != FR_OK)
@@ -133,20 +210,20 @@ bool update_screen()
     bool success = true;
 
     FIL file;
-    FRESULT fatfs_result = f_open(&file, state.current_book, FA_READ | FA_OPEN_EXISTING);
+    FRESULT fatfs_result = f_open(&file, state.book, FA_READ | FA_OPEN_EXISTING);
     if (fatfs_result != FR_OK)
     {
-      flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+      flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
       sleep_ms(1000);
       error(ERROR_FATFS_OPEN, false);
       success = false;
     }
     else
     {
-      fatfs_result = f_lseek(&file, state.scroll);
+      fatfs_result = f_lseek(&file, state.book_scroll);
       if (fatfs_result != FR_OK)
       {
-        flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+        flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
         sleep_ms(1000);
         error(ERROR_FATFS_LSEEK, false);
         success = false;
@@ -156,7 +233,7 @@ bool update_screen()
         fatfs_result = f_read(&file, text_buffer_1, sizeof(text_buffer_1), NULL);
         if (fatfs_result != FR_OK)
         {
-          flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+          flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
           sleep_ms(1000);
           error(ERROR_FATFS_LSEEK, false);
           success = false;
@@ -167,7 +244,7 @@ bool update_screen()
     if (!success)
     {
       strlcpy(text_buffer_1, "Error reading '", sizeof(text_buffer_1));
-      strlcat(text_buffer_1, state.current_book, sizeof(text_buffer_1));
+      strlcat(text_buffer_1, state.book, sizeof(text_buffer_1));
       strlcat(text_buffer_1, "'", sizeof(text_buffer_1));
     }
 
@@ -231,7 +308,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
     {
       button_pressed[button_action] = true;
 
-      switch (state.current_page)
+      switch (state.page)
       {
       case PAGE_CATALOG:
         switch (button_action)
@@ -246,14 +323,14 @@ void gpio_callback(const uint pin_number, const unsigned long events)
           screen_update_scheduled = true;
           break;
         case BUTTON_ENTER:
-          state.current_page = PAGE_READER;
+          state.page = PAGE_READER;
           state.history_index = (state.history_index + 1) % HISTORY_LENGTH;
           state.history[state.history_index] = PAGE_CATALOG;
           state.scroll = 0;
           screen_update_scheduled = true;
           break;
         case BUTTON_BACK:
-          state.current_page = state.history[state.history_index];
+          state.page = state.history[state.history_index];
           state.history_index = (state.history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
           screen_update_scheduled = true;
           break;
@@ -263,20 +340,20 @@ void gpio_callback(const uint pin_number, const unsigned long events)
         switch (button_action)
         {
         case BUTTON_NEXT:
-          state.scroll += SCROLL_SIZE;
+          state.book_scroll += SCROLL_SIZE;
           screen_update_scheduled = true;
           break;
         case BUTTON_PREVIOUS:
-          if (state.scroll >= SCROLL_SIZE)
+          if (state.book_scroll >= SCROLL_SIZE)
           {
-            state.scroll -= SCROLL_SIZE;
+            state.book_scroll -= SCROLL_SIZE;
             screen_update_scheduled = true;
           }
           break;
         case BUTTON_ENTER:
           break;
         case BUTTON_BACK:
-          state.current_page = state.history[state.history_index];
+          state.page = state.history[state.history_index];
           state.history_index = (state.history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
           screen_update_scheduled = true;
           break;
@@ -294,7 +371,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
           screen_update_scheduled = true;
           break;
         case BUTTON_ENTER:
-          state.current_page = PAGE_CATALOG; // Sets history below
+          state.page = PAGE_CATALOG; // Sets history below
           state.scroll = 0;
           screen_update_scheduled = true;
           break;
@@ -314,7 +391,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
 
   last_gpio_event_time[button_action] = now;
 
-  if (state.current_page == PAGE_CATALOG) // Back on the catalog page always goes to settings
+  if (state.page == PAGE_CATALOG) // Back on the catalog page always goes to settings
   {
     state.history_index = 0;
     state.history[0] = PAGE_FONT_SIZE;
@@ -333,7 +410,7 @@ bool attempt_mount_flash(bool fail_gracefully)
     return false;
   if (fatfs_result != FR_OK)
   {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
     sleep_ms(1000);
     error(ERROR_FATFS_MOUNT, true);
     while (1)
@@ -344,7 +421,7 @@ bool attempt_mount_flash(bool fail_gracefully)
   fatfs_result = f_setlabel("mReader");
   if (fatfs_result != FR_OK)
   {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
     sleep_ms(1000);
     error(ERROR_FATFS_SETLABEL, false);
   }
@@ -355,7 +432,7 @@ bool attempt_mount_flash(bool fail_gracefully)
     return false;
   if (fatfs_result != FR_OK)
   {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
     sleep_ms(1000);
     error(ERROR_FATFS_OPENDIR, true);
     return false;
@@ -365,7 +442,7 @@ bool attempt_mount_flash(bool fail_gracefully)
   fatfs_result = f_readdir(&root_directory, &file);
   if (fatfs_result != FR_OK)
   {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
     sleep_ms(1000);
     error(ERROR_FATFS_READDIR, fail_gracefully);
     return false;
@@ -382,6 +459,7 @@ int main()
 {
   ws2812_init(LED_PIN);
   put_pixel(LED_OFF);
+  sleep_ms(1); // Sometimes hangs without, idk
 
   // Register button interrupts
   gpio_init(BUTTON_0_PIN);
@@ -405,7 +483,7 @@ int main()
     FRESULT fatfs_result = f_mkfs("", NULL, fatfs_format_work_area, sizeof(fatfs_format_work_area));
     if (fatfs_result != FR_OK)
     {
-      flash_code((char)fatfs_result, LED_BLUE, LED_GREEN);
+      flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
       sleep_ms(1000);
       error(ERROR_FATFS_MKFS, true);
       while (1)
@@ -423,14 +501,12 @@ int main()
     }
 
     FIL fil;
-    f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);
-    f_write(&fil, "Hello, World!\n", 15, NULL);
-    f_close(&fil);
-    f_open(&fil, "book.txt", FA_CREATE_NEW | FA_WRITE);
-#define TEST_STRING "According to all known laws of aviation, there is no way a bee should be able to fly. Its wings are too small to get its fat little body off the ground. The bee, of course, flies anyway because bees don't care what humans think is impossible.\n"
-    f_write(&fil, TEST_STRING, sizeof(TEST_STRING), NULL);
+    f_open(&fil, "Welcome.md", FA_CREATE_NEW | FA_WRITE);
+    f_write(&fil, welcome_file, sizeof(welcome_file) - 1, NULL);
     f_close(&fil);
   }
+
+  usb_init();
 
   while (1)
   {
@@ -438,7 +514,7 @@ int main()
     // USB //
     /////////
 
-    // tud_task(); // TinyUSB device task
+    usb_task();
 
     if (usb_just_unmounted)
     {
@@ -450,20 +526,12 @@ int main()
     // Screen //
     ////////////
 
-    // sleep_ms(1);
-    // put_pixel(LED_RED);
-    // sleep_ms(1);
-
     if (screen_update_scheduled)
     {
       screen_update_scheduled = false;
       if (!update_screen())
         screen_update_scheduled = true; // Schedule another if it failed
     }
-
-    sleep_ms(1);
-    // put_pixel(LED_GREEN);
-    // sleep_ms(1);
   }
 
   // Should be unreachable

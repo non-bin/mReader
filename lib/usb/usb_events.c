@@ -18,37 +18,37 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __MAIN_H_
-#define __MAIN_H_
+#include <stdbool.h>
+#include "tusb.h"
+#include "flash.h"
 
-#include <stdint.h>
+volatile bool usb_mounted = false;
+volatile bool usb_just_unmounted = false;
 
-typedef enum
+/**
+ * \brief Run when the drive is mounted
+ */
+void tud_mount_cb()
 {
-  BUTTON_NEXT,
-  BUTTON_PREVIOUS,
-  BUTTON_ENTER,
-  BUTTON_BACK
-} button_action_t;
+  usb_mounted = true;
+}
 
-typedef enum
+/**
+ * \brief Run when the drive is unmounted
+ */
+void tud_umount_cb()
 {
-  PAGE_CATALOG,
-  PAGE_READER,
-  PAGE_FONT_SIZE
-} page_t;
+  flash_sync();
+  usb_mounted = false;
+  usb_just_unmounted = true;
+}
 
-typedef struct
+/**
+ * \brief Run when the host suspends the USB connection
+ */
+void tud_suspend_cb(bool remote_wakeup_en)
 {
-  page_t page;
-  uint64_t scroll;
-  char book[MAX_PATH_LENGTH];
-  uint64_t book_scroll;
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
-#endif /* __MAIN_H_ */
+  flash_sync();
+  usb_mounted = false;
+  usb_just_unmounted = true;
+}

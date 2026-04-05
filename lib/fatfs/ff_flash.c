@@ -22,46 +22,40 @@
  */
 
 #include <stdint.h>
-#include <string.h> // memcpy
+#include <string.h>         // memcpy
+#include "hardware/flash.h" // FLASH_SECTOR_SIZE
 #include "ff.h"
 #include "diskio.h"
+#include "usb.h" // usb_mounted
 #include "flash.h"
-#include "tinyusb.h" // usb_mounted
-#include "hardware/flash.h"
-#include "hardware/sync.h" // interrupts
 #include "error.h"
 
-static inline uint32_t lba_to_flash_offset(uint32_t lba)
-{
-  return DISK_FLASH_OFFSET + lba * DISK_BLOCK_SIZE;
-}
+#define STA_OK 0x00 // DSTATUS
 
+/**
+ * \brief Get the status of a drive
+ */
 DSTATUS disk_status(BYTE drive_number)
 {
   switch (drive_number)
   {
   case FF_DRIVE_FLASH:
-    if (!usb_mounted)
-      return STA_OK;
+    // if (!usb_mounted) // TODO
+    return STA_OK;
   }
   return STA_NOINIT;
 }
 
+/**
+ * \brief Initialise a drive
+ */
 DSTATUS disk_initialize(BYTE drive_number)
 {
   switch (drive_number)
   {
   case FF_DRIVE_FLASH:
   {
-    extern uint8_t __flash_binary_end;
-    uintptr_t fw_end_off = (uintptr_t)&__flash_binary_end - (uintptr_t)XIP_BASE;
-    if (fw_end_off > FLASH_FIRMWARE_BYTES)
-    {
-      error(ERROR_FIRMWARE_TOO_LONG, true);
-      while (1)
-      {
-      }
-    }
+    flash_init();
 
     return STA_OK;
   }
@@ -69,11 +63,14 @@ DSTATUS disk_initialize(BYTE drive_number)
   return STA_NOINIT;
 }
 
+/**
+ * \brief Read blocks from a drive
+ */
 DRESULT disk_read(
     BYTE drive_number,
-    BYTE *buff,   /* Data buffer to store read data */
-    LBA_t sector, /* Start sector in LBA */
-    UINT count    /* Number of sectors to read */
+    BYTE *buff,       /* Data buffer to store read data */
+    LBA_t disk_block, /* Start block in LBA */
+    UINT count        /* Number of blocks to read */
 )
 {
   if (disk_status(drive_number) & STA_NOINIT)
@@ -83,14 +80,11 @@ DRESULT disk_read(
   {
   case FF_DRIVE_FLASH:
   {
-    uint32_t offset = lba_to_flash_offset(sector);
-    do
-    {
-      memcpy(buff, (const void *)(XIP_BASE + offset), DISK_BLOCK_SIZE);
-      buff += DISK_BLOCK_SIZE;
-    } while (--count);
+    flash_read(buff, disk_block, count);
 
-    return count ? RES_ERROR : RES_OK;
+    return RES_OK;
+
+    // return RES_ERROR;
   }
   }
 
@@ -99,11 +93,14 @@ DRESULT disk_read(
 
 #if FF_FS_READONLY == 0
 
+/**
+ * \brief Write blocks to a drive
+ */
 DRESULT disk_write(
     BYTE drive_number,
     const BYTE *buff, /* Data to be written */
-    LBA_t sector,     /* Start sector in LBA */
-    UINT count        /* Number of sectors to write */
+    LBA_t disk_block, /* Start block in LBA */
+    UINT count        /* Number of blocks to write */
 )
 {
   if (disk_status(drive_number) & STA_NOINIT)
@@ -113,21 +110,12 @@ DRESULT disk_write(
   {
   case FF_DRIVE_FLASH:
   {
-    uint32_t offset = lba_to_flash_offset(sector);
-
-    // TODO write cache, and impliment CTRL_SYNC https://elm-chan.org/fsw/ff/doc/dioctl.html
-    // Write one 512-byte block using a 4KB read-modify-erase-program cycle
-    uint32_t sector_base_address = offset & ~(FLASH_SECTOR_SIZE - 1u);
-    uint32_t offset_in_sector = offset - sector_base_address;
-
-    uint8_t sector_buffer[FLASH_SECTOR_SIZE];
-    memcpy(sector_buffer, (const void *)(XIP_BASE + sector_base_address), FLASH_SECTOR_SIZE);
-    memcpy(&sector_buffer[offset_in_sector], buff, DISK_BLOCK_SIZE);
-
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(sector_base_address, FLASH_SECTOR_SIZE);
-    flash_range_program(sector_base_address, sector_buffer, FLASH_SECTOR_SIZE);
-    restore_interrupts(ints);
+    do
+    {
+      flash_write(buff, disk_block);
+      disk_block++;
+      buff += DISK_BLOCK_SIZE;
+    } while (--count);
 
     return RES_OK;
   }
@@ -138,6 +126,9 @@ DRESULT disk_write(
 
 #endif
 
+/**
+ * \brief Run control commands on a drive
+ */
 DRESULT disk_ioctl(
     BYTE drive_number, /* Physical drive nmuber (0..) */
     BYTE command,      /* Control code */
@@ -149,14 +140,22 @@ DRESULT disk_ioctl(
   case FF_DRIVE_FLASH:
     switch (command)
     {
-    case CTRL_SYNC:
+    case CTRL_SYNC: // Flush write cache, if any
+      flash_sync();
       return RES_OK;
-    case GET_SECTOR_COUNT:
+
+    case GET_SECTOR_COUNT: // Get number of disk blocks
       *(LBA_t *)buff = DISK_BLOCK_COUNT;
-    case GET_SECTOR_SIZE:
+      return RES_OK;
+
+    case GET_SECTOR_SIZE: // Get disk block size, in bytes
       *(LBA_t *)buff = DISK_BLOCK_SIZE;
-    case GET_BLOCK_SIZE:
-      *(LBA_t *)buff = FLASH_BLOCK_SIZE;
+      return RES_OK;
+
+    case GET_BLOCK_SIZE: // Get flash sector size, in units of disk blocks
+      *(LBA_t *)buff = (FLASH_SECTOR_SIZE / DISK_BLOCK_SIZE);
+      return RES_OK;
+
     case CTRL_TRIM:
       return RES_OK;
     }

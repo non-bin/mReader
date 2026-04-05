@@ -18,6 +18,7 @@
  * THE SOFTWARE.
  *
  * \copyright 2026 by The Monotype Corporation <https://learn.microsoft.com/en-us/typography/font-list/courier-new>
+ * \copyright 2014 by STMicroelectronics
  * \copyright 2019 by the Waveshare team <https://github.com/waveshare/Pico_ePaper_Code>
  * \copyright 2022 by hammadrauf <https://github.com/hammadrauf/pico_epd_1in54>
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>

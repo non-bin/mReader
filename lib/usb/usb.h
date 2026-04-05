@@ -18,12 +18,15 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
-#ifndef __FLASH_H_
-#define __FLASH_H_
+#ifndef __TINYUSB_H_
+#define __TINYUSB_H_
 
-#include "config.h"
+#include <stdbool.h>
 
-#define DISK_FLASH_OFFSET (FLASH_TOTAL_BYTES - DISK_SIZE_BYTES)
-#define DISK_BLOCK_COUNT (DISK_SIZE_BYTES / DISK_BLOCK_SIZE)
+extern volatile bool usb_mounted;
+extern volatile bool usb_just_unmounted;
 
-#endif /* __FLASH_H_ */
+void usb_init();
+void usb_task();
+
+#endif /* __TINYUSB_H_ */
