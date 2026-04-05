@@ -38,17 +38,4 @@ typedef enum
   PAGE_FONT_SIZE
 } page_t;
 
-typedef struct
-{
-  page_t page;
-  uint64_t scroll;
-  char book[MAX_PATH_LENGTH];
-  uint64_t book_scroll;
-  page_t history[HISTORY_LENGTH];
-  uint16_t history_index;
-  uint16_t font_index;
-  uint16_t fg_color;
-  uint16_t bg_color;
-} state_t;
-
 #endif /* __MAIN_H_ */

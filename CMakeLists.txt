@@ -18,7 +18,7 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/text_files/welcome.h "${content}")
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/text_files)
 
 include_directories(src)
-add_executable(${PROJECT_NAME} src/main.c)
+add_executable(${PROJECT_NAME} src/main.c src/helpers.c)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
 target_compile_definitions(${PROJECT_NAME} PRIVATE PICO_MALLOC_PANIC=0) # Don't panic if malloc fails
 

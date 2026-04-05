@@ -38,7 +38,7 @@
 #define VERSION_STRING "v0.0.0" // eg "v2.14.3"
 #define VERSION_BCD 0x0000      // eg 0x2143
 #define HISTORY_LENGTH 4
-#define SCROLL_SIZE 100
+#define SCROLL_SIZE 4
 #define MAX_PATH_LENGTH 512
 
 //////////

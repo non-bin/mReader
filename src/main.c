@@ -20,15 +20,15 @@
 
 #include "config.h"
 #include "main.h"
+#include "helpers.h"
 
 #include <stdlib.h>       // itoa
-#include <stdio.h>        // snprintf
 #include "pico/bootrom.h" // rom_reset_usb_boot_extra
 #include "pico/stdlib.h"  // sleep
 #include "hardware/gpio.h"
 
 #include "error.h"
-#include "ff.h"
+#include "fatfs.h"
 #include "usb.h"
 #include "ws2812.h"
 #include "epaper.h"
@@ -43,17 +43,19 @@ absolute_time_t last_screen_update = {0};
 absolute_time_t last_gpio_event_time[4] = {0};
 bool button_pressed[4] = {false};
 
-state_t state = {
-    .page = PAGE_CATALOG,
-    .scroll = 0,
-    .book = "",
-    .book_scroll = 0,
-    .history = {PAGE_FONT_SIZE},
-    .history_index = 0,
-    .font_index = 5,
-    .fg_color = EPAPER_BLACK,
-    .bg_color = EPAPER_WHITE,
-};
+page_t page = PAGE_CATALOG;
+uint64_t scroll = 0;
+
+char book[MAX_PATH_LENGTH] = "";
+uint64_t book_scroll = 0;
+int8_t book_scroll_requested = 0;
+
+page_t history[HISTORY_LENGTH] = {PAGE_FONT_SIZE};
+uint16_t history_index = 0;
+
+uint16_t font_index = 5;
+uint16_t fg_color = EPAPER_BLACK;
+uint16_t bg_color = EPAPER_WHITE;
 
 uint8_t *image_buffer;
 bool screen_update_scheduled = true;
@@ -61,52 +63,6 @@ absolute_time_t now = {0};
 
 char text_buffer_1[EPAPER_WIDTH * EPAPER_HEIGHT]; // Can store enough text to fill the entire screen with 1px font
 char text_buffer_2[EPAPER_WIDTH * EPAPER_HEIGHT];
-
-#ifdef FORMAT_DATA_INCLUDE_IB
-#define FORMAT_DATA_IB "iB"
-#else
-#define FORMAT_DATA_IB ""
-#endif
-
-/**
- * \brief Format a data size in bytes, into a human readable string with units, e.g. "1.2M"
- * \param output Buffer to write the string into
- * \param input Data size in bytes
- * \param length Length of the output buffer
- * \return Pointer to the output buffer
- */
-char *format_data_size(char *output, uint32_t input, size_t length)
-{
-  if (input < 1024)
-  {
-    snprintf(output, length, "%uB", (unsigned int)input);
-    return output;
-  }
-  else if (input < 1024 * 1024)
-  {
-    uint32_t whole = input / 1024;
-    uint32_t tenths = ((input % 1024) * 10 + 512) / 1024;
-    if (tenths >= 10)
-    {
-      whole++;
-      tenths -= 10;
-    }
-    snprintf(output, length, "%lu.%luK" FORMAT_DATA_IB, (unsigned long)whole, (unsigned long)tenths);
-    return output;
-  }
-  else
-  {
-    uint32_t whole = input / (1024 * 1024);
-    uint32_t tenths = ((input % (1024 * 1024)) * 10 + 524288) / (1024 * 1024);
-    if (tenths >= 10)
-    {
-      whole++;
-      tenths -= 10;
-    }
-    snprintf(output, length, "%lu.%luM" FORMAT_DATA_IB, (unsigned long)whole, (unsigned long)tenths);
-    return output;
-  }
-}
 
 /**
  * \brief Attempt a screen update
@@ -121,7 +77,7 @@ bool update_screen()
 
   uint16_t cursor_y = 0;
 
-  switch (state.page)
+  switch (page)
   {
   case PAGE_CATALOG:
   {
@@ -134,7 +90,7 @@ bool update_screen()
       return false;
     }
 
-    cursor_y = gui_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, state.fg_color, state.bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, fg_color, bg_color);
 
     for (uint8_t i = 0; i < 200; i++)
     {
@@ -153,9 +109,9 @@ bool update_screen()
 
       if (!(file.fattrib & AM_DIR)) // If it's not a directory
       {
-        if (i == state.scroll)
+        if (i == scroll)
         {
-          strlcpy(state.book, file.fname, sizeof(state.book));
+          strlcpy(book, file.fname, sizeof(book));
           strlcpy(text_buffer_1, ">", sizeof(text_buffer_1));
         }
         else
@@ -168,10 +124,10 @@ bool update_screen()
         strrchr(file_name, '.')[0] = 0; // Remove file extension for display
         strlcat(text_buffer_1, file_name, sizeof(text_buffer_1));
 
-        cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, state.fg_color, state.bg_color);
+        cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, fg_color, bg_color);
       }
-      else if (i == state.scroll)
-        state.scroll++; // Skip directories
+      else if (i == scroll)
+        scroll++; // Skip directories
     }
 
     FATFS *fs = {0};
@@ -184,7 +140,7 @@ bool update_screen()
       return false;
     }
 
-    cursor_y = gui_draw_string(0, cursor_y, "", &DEFAULT_FONT, state.fg_color, state.bg_color); // New line
+    cursor_y = gui_draw_string(0, cursor_y, "", &DEFAULT_FONT, fg_color, bg_color); // New line
 
     format_data_size(text_buffer_1, (fs->n_fatent - 2 - free_clusters) * fs->csize * DISK_BLOCK_SIZE, sizeof(text_buffer_1));
     strlcat(text_buffer_1, "/", sizeof(text_buffer_1));
@@ -195,7 +151,7 @@ bool update_screen()
     strlcat(text_buffer_1, text_buffer_2, sizeof(text_buffer_1));
     strlcat(text_buffer_1, " Free", sizeof(text_buffer_1));
 
-    cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, state.fg_color, state.bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, fg_color, bg_color);
 
     fatfs_result = f_closedir(&root_directory);
     if (fatfs_result != FR_OK)
@@ -210,7 +166,7 @@ bool update_screen()
     bool success = true;
 
     FIL file;
-    FRESULT fatfs_result = f_open(&file, state.book, FA_READ | FA_OPEN_EXISTING);
+    FRESULT fatfs_result = f_open(&file, book, FA_READ | FA_OPEN_EXISTING);
     if (fatfs_result != FR_OK)
     {
       flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
@@ -220,47 +176,99 @@ bool update_screen()
     }
     else
     {
-      fatfs_result = f_lseek(&file, state.book_scroll);
-      if (fatfs_result != FR_OK)
+      if (book_scroll_requested > 0) // Scrolling forwards
       {
-        flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
-        sleep_ms(1000);
-        error(ERROR_FATFS_LSEEK, false);
-        success = false;
-      }
-      else
-      {
-        fatfs_result = f_read(&file, text_buffer_1, sizeof(text_buffer_1), NULL);
-        if (fatfs_result != FR_OK)
+        success = read_file_at_offset(&file, book_scroll, text_buffer_1, sizeof(text_buffer_1));
+        if (success)
         {
-          flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
-          sleep_ms(1000);
-          error(ERROR_FATFS_LSEEK, false);
-          success = false;
+          char *newline = text_buffer_1;
+          for (int s = 0; s < book_scroll_requested * SCROLL_SIZE; s++)
+          {
+            char *next_newline = strchr(newline, '\n');
+            if (next_newline)
+            {
+              book_scroll += (next_newline - newline) + 1; // Move scroll by the distance to the newline
+              newline = next_newline + 1;                  // Move past the newline for the next search
+            }
+            else
+            {
+              book_scroll += sizeof(text_buffer_1); // No newline, just move scroll by buffer size
+              break;
+            }
+          }
+          book_scroll_requested = 0;
         }
+      }
+      else if (book_scroll_requested < 0) // Scrolling backwards
+      {
+        uint32_t amount = (book_scroll < sizeof(text_buffer_1)) ? book_scroll : sizeof(text_buffer_1);
+        uint64_t base = book_scroll - amount;
+
+        success = read_file_at_offset(&file, base, text_buffer_1, amount);
+
+        if (success)
+        {
+          uint32_t search_end = amount;
+
+          for (uint32_t s = 0; s < -book_scroll_requested * SCROLL_SIZE; s++)
+          {
+            if (search_end > 0 && text_buffer_1[search_end - 1] == '\n')
+            {
+              search_end--;
+            }
+
+            char *newline = NULL;
+            for (uint32_t i = search_end - 1; i >= 0; i--)
+            {
+              if (text_buffer_1[i] == '\n')
+              {
+                newline = &text_buffer_1[i];
+                search_end = i + 1;
+                break;
+              }
+            }
+
+            if (newline)
+            {
+              book_scroll = base + (newline - text_buffer_1) + 1;
+            }
+            else
+            {
+              book_scroll = base;
+              break;
+            }
+          }
+          book_scroll_requested = 0;
+        }
+      }
+
+      if (success)
+      {
+        success = read_file_at_offset(&file, book_scroll, text_buffer_1, sizeof(text_buffer_1));
       }
     }
 
     if (!success)
     {
       strlcpy(text_buffer_1, "Error reading '", sizeof(text_buffer_1));
-      strlcat(text_buffer_1, state.book, sizeof(text_buffer_1));
+      strlcat(text_buffer_1, book, sizeof(text_buffer_1));
       strlcat(text_buffer_1, "'", sizeof(text_buffer_1));
     }
 
-    gui_draw_string(0, cursor_y, text_buffer_1, fonts[state.font_index], state.fg_color, state.bg_color);
+    gui_draw_string(0, cursor_y, text_buffer_1, fonts[font_index], fg_color, bg_color);
+
     epaper_display(image_buffer, false);
     return success;
   }
 
   case PAGE_FONT_SIZE:
   {
-    itoa(fonts[state.font_index]->height, text_buffer_1, 10);
+    itoa(fonts[font_index]->height, text_buffer_1, 10);
     strlcpy(text_buffer_2, "Font Size: ", sizeof(text_buffer_2));
     strlcat(text_buffer_2, text_buffer_1, sizeof(text_buffer_2));
 
-    cursor_y = gui_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, state.fg_color, state.bg_color);
-    gui_draw_string(0, cursor_y, FONT_PALLET, fonts[state.font_index], state.fg_color, state.bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, fg_color, bg_color);
+    gui_draw_string(0, cursor_y, FONT_PALLET, fonts[font_index], fg_color, bg_color);
 
     epaper_display(image_buffer, false);
     return true;
@@ -308,71 +316,70 @@ void gpio_callback(const uint pin_number, const unsigned long events)
     {
       button_pressed[button_action] = true;
 
-      switch (state.page)
+      switch (page)
       {
       case PAGE_CATALOG:
         switch (button_action)
         {
         case BUTTON_NEXT:
-          state.scroll++;
+          scroll++;
           screen_update_scheduled = true;
           break;
         case BUTTON_PREVIOUS:
-          if (state.scroll > 0)
-            state.scroll--;
+          if (scroll > 0)
+            scroll--;
           screen_update_scheduled = true;
           break;
         case BUTTON_ENTER:
-          state.page = PAGE_READER;
-          state.history_index = (state.history_index + 1) % HISTORY_LENGTH;
-          state.history[state.history_index] = PAGE_CATALOG;
-          state.scroll = 0;
+          page = PAGE_READER;
+          history_index = (history_index + 1) % HISTORY_LENGTH;
+          history[history_index] = PAGE_CATALOG;
+          scroll = 0;
           screen_update_scheduled = true;
           break;
         case BUTTON_BACK:
-          state.page = state.history[state.history_index];
-          state.history_index = (state.history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+          page = history[history_index];
+          history_index = (history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
           screen_update_scheduled = true;
           break;
         }
         break;
+
       case PAGE_READER:
         switch (button_action)
         {
         case BUTTON_NEXT:
-          state.book_scroll += SCROLL_SIZE;
+          book_scroll_requested++;
           screen_update_scheduled = true;
           break;
         case BUTTON_PREVIOUS:
-          if (state.book_scroll >= SCROLL_SIZE)
-          {
-            state.book_scroll -= SCROLL_SIZE;
-            screen_update_scheduled = true;
-          }
+          book_scroll_requested--;
+          screen_update_scheduled = true;
           break;
         case BUTTON_ENTER:
           break;
         case BUTTON_BACK:
-          state.page = state.history[state.history_index];
-          state.history_index = (state.history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+          page = history[history_index];
+          history_index = (history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
           screen_update_scheduled = true;
           break;
         }
         break;
+
       case PAGE_FONT_SIZE:
         switch (button_action)
         {
         case BUTTON_NEXT:
-          state.font_index = (state.font_index + 1) % FONT_COUNT; // Cycle through available fonts
+          font_index = (font_index + 1) % FONT_COUNT; // Cycle through available fonts
           screen_update_scheduled = true;
           break;
         case BUTTON_PREVIOUS:
-          state.font_index = (state.font_index - 1 + FONT_COUNT) % FONT_COUNT; // Cycle backwards through available fonts
+          font_index = (font_index - 1 + FONT_COUNT) % FONT_COUNT; // Cycle backwards through available fonts
           screen_update_scheduled = true;
           break;
         case BUTTON_ENTER:
-          state.page = PAGE_CATALOG; // Sets history below
-          state.scroll = 0;
+          page = PAGE_CATALOG; // Sets history below
+          scroll = 0;
           screen_update_scheduled = true;
           break;
         case BUTTON_BACK:
@@ -391,68 +398,11 @@ void gpio_callback(const uint pin_number, const unsigned long events)
 
   last_gpio_event_time[button_action] = now;
 
-  if (state.page == PAGE_CATALOG) // Back on the catalog page always goes to settings
+  if (page == PAGE_CATALOG) // Back on the catalog page always goes to settings
   {
-    state.history_index = 0;
-    state.history[0] = PAGE_FONT_SIZE;
+    history_index = 0;
+    history[0] = PAGE_FONT_SIZE;
   }
-}
-
-/**
- * \brief Try to mount the filesystem
- * \param fail_gracefully Whether to continue on error (true) or halt (false)
- * \return True if the drive was successfully mounted, false otherwise
- */
-bool attempt_mount_flash(bool fail_gracefully)
-{
-  FRESULT fatfs_result = f_mount(&fatfs_work_area, "", 0);
-  if (fatfs_result == FR_NO_FILESYSTEM)
-    return false;
-  if (fatfs_result != FR_OK)
-  {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
-    sleep_ms(1000);
-    error(ERROR_FATFS_MOUNT, true);
-    while (1)
-    {
-    }
-  }
-
-  fatfs_result = f_setlabel("mReader");
-  if (fatfs_result != FR_OK)
-  {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
-    sleep_ms(1000);
-    error(ERROR_FATFS_SETLABEL, false);
-  }
-
-  DIR root_directory;
-  fatfs_result = f_opendir(&root_directory, "/");
-  if (fatfs_result == FR_NO_FILESYSTEM)
-    return false;
-  if (fatfs_result != FR_OK)
-  {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
-    sleep_ms(1000);
-    error(ERROR_FATFS_OPENDIR, true);
-    return false;
-  }
-
-  FILINFO file;
-  fatfs_result = f_readdir(&root_directory, &file);
-  if (fatfs_result != FR_OK)
-  {
-    flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
-    sleep_ms(1000);
-    error(ERROR_FATFS_READDIR, fail_gracefully);
-    return false;
-  }
-
-  fatfs_result = f_closedir(&root_directory);
-  if (fatfs_result != FR_OK)
-    error(ERROR_FATFS_CLOSEDIR, fail_gracefully);
-
-  return true;
 }
 
 int main()
@@ -463,19 +413,19 @@ int main()
 
   // Register button interrupts
   gpio_init(BUTTON_0_PIN);
-  gpio_set_irq_enabled_with_callback(BUTTON_0_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+  gpio_set_irq_enabled_with_callback(BUTTON_0_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
   gpio_init(BUTTON_1_PIN);
-  gpio_set_irq_enabled_with_callback(BUTTON_1_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+  gpio_set_irq_enabled_with_callback(BUTTON_1_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
   gpio_init(BUTTON_2_PIN);
-  gpio_set_irq_enabled_with_callback(BUTTON_2_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+  gpio_set_irq_enabled_with_callback(BUTTON_2_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
   gpio_init(BUTTON_3_PIN);
-  gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+  gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
 
   epaper_init();
   image_buffer = gui_init(EPAPER_WIDTH, EPAPER_HEIGHT, GUI_ROTATE_270, GUI_BITS_PER_PIXEL_2, GUI_MIRROR_NONE);
 
   // Mount and maybe format the flash
-  if ((gpio_get(BUTTON_0_PIN) && gpio_get(BUTTON_1_PIN) && gpio_get(BUTTON_2_PIN) && gpio_get(BUTTON_3_PIN)) || !attempt_mount_flash(true))
+  if ((gpio_get(BUTTON_0_PIN) && gpio_get(BUTTON_1_PIN) && gpio_get(BUTTON_2_PIN) && gpio_get(BUTTON_3_PIN)) || !attempt_mount_flash(&fatfs_work_area, true))
   {
     put_pixel(LED_YELLOW);
 
@@ -493,7 +443,7 @@ int main()
 
     put_pixel(LED_OFF);
 
-    if (!attempt_mount_flash(false))
+    if (!attempt_mount_flash(&fatfs_work_area, false))
     {
       while (1)
       {
@@ -519,7 +469,11 @@ int main()
     if (usb_just_unmounted)
     {
       usb_just_unmounted = false;
-      // text = read_book();
+      if (page == PAGE_CATALOG)
+      {
+        scroll = 0;
+        screen_update_scheduled = true;
+      }
     }
 
     ////////////

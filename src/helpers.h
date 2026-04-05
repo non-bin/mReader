@@ -18,37 +18,10 @@
  * \copyright 2026 by Alice Jacka <https://github.com/non-bin/mReader>
  */
 
+#include <stdint.h>
 #include <stdbool.h>
-#include "tusb.h"
-#include "flash.h"
+#include "fatfs.h"
 
-volatile bool usb_mounted = false;
-volatile bool usb_just_unmounted = false;
-
-/**
- * \brief Run when the drive is mounted
- */
-void tud_mount_cb()
-{
-  usb_mounted = true;
-}
-
-/**
- * \brief Run when the drive is unmounted
- */
-void tud_umount_cb()
-{
-  flash_sync();
-  usb_mounted = false;
-  usb_just_unmounted = true;
-}
-
-/**
- * \brief Run when the host suspends the USB connection
- */
-void tud_suspend_cb(bool remote_wakeup_en)
-{
-  flash_sync();
-  usb_mounted = false;
-  // usb_just_unmounted = true;
-}
+char *format_data_size(char *output, uint32_t input, uint32_t length);
+bool attempt_mount_flash(FATFS *fatfs_work_area, bool fail_gracefully);
+bool read_file_at_offset(FIL *file, uint32_t offset, char *buffer, uint32_t buffer_size);
