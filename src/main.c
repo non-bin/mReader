@@ -44,6 +44,7 @@ absolute_time_t last_gpio_event_time[4] = {0};
 bool button_pressed[4] = {false};
 
 page_t page = PAGE_CATALOG;
+uint8_t partial_refresh_count = PARTIAL_REFRESH_LIMIT + 1;
 uint64_t scroll = 0;
 
 char book[MAX_PATH_LENGTH] = "";
@@ -73,14 +74,14 @@ bool update_screen()
   if (epaper_is_busy())
     return false;
 
-  gui_draw_fill(EPAPER_WHITE);
-
   uint16_t cursor_y = 0;
 
   switch (page)
   {
   case PAGE_CATALOG:
   {
+    gui_draw_fill(EPAPER_WHITE);
+
     DIR root_directory;
     FILINFO file;
     FRESULT fatfs_result = f_opendir(&root_directory, "/");
@@ -157,8 +158,7 @@ bool update_screen()
     if (fatfs_result != FR_OK)
       error(ERROR_FATFS_CLOSEDIR, false);
 
-    epaper_display(image_buffer, false);
-    return true;
+    break;
   }
 
   case PAGE_READER:
@@ -255,10 +255,10 @@ bool update_screen()
       strlcat(text_buffer_1, "'", sizeof(text_buffer_1));
     }
 
+    gui_draw_fill(EPAPER_WHITE);
     gui_draw_string(0, cursor_y, text_buffer_1, fonts[font_index], fg_color, bg_color);
 
-    epaper_display(image_buffer, false);
-    return success;
+    break;
   }
 
   case PAGE_FONT_SIZE:
@@ -267,15 +267,31 @@ bool update_screen()
     strlcpy(text_buffer_2, "Font Size: ", sizeof(text_buffer_2));
     strlcat(text_buffer_2, text_buffer_1, sizeof(text_buffer_2));
 
+    gui_draw_fill(EPAPER_WHITE);
     cursor_y = gui_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, fg_color, bg_color);
     gui_draw_string(0, cursor_y, FONT_PALLET, fonts[font_index], fg_color, bg_color);
 
-    epaper_display(image_buffer, false);
-    return true;
+    break;
   }
   }
 
-  return false;
+  partial_refresh_count++;
+
+  if (partial_refresh_count > PARTIAL_REFRESH_LIMIT)
+  {
+    partial_refresh_count = 0;
+    epaper_enter_full_mode();
+  }
+
+  epaper_display(image_buffer);
+
+  if (partial_refresh_count == 0)
+  {
+    epaper_enter_partial_mode();
+    epaper_display(image_buffer); // Upload current state
+  }
+
+  return true;
 }
 
 /**
@@ -332,13 +348,16 @@ void gpio_callback(const uint pin_number, const unsigned long events)
           break;
         case BUTTON_ENTER:
           page = PAGE_READER;
+          // partial_refresh_count = PARTIAL_REFRESH_LIMIT;
           history_index = (history_index + 1) % HISTORY_LENGTH;
           history[history_index] = PAGE_CATALOG;
           scroll = 0;
           screen_update_scheduled = true;
           break;
         case BUTTON_BACK:
-          page = history[history_index];
+          if (page != history[history_index])
+            // partial_refresh_count = PARTIAL_REFRESH_LIMIT;
+            page = history[history_index];
           history_index = (history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
           screen_update_scheduled = true;
           break;
@@ -359,7 +378,9 @@ void gpio_callback(const uint pin_number, const unsigned long events)
         case BUTTON_ENTER:
           break;
         case BUTTON_BACK:
-          page = history[history_index];
+          if (page != history[history_index])
+            // partial_refresh_count = PARTIAL_REFRESH_LIMIT;
+            page = history[history_index];
           history_index = (history_index - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
           screen_update_scheduled = true;
           break;
@@ -379,6 +400,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
           break;
         case BUTTON_ENTER:
           page = PAGE_CATALOG; // Sets history below
+          // partial_refresh_count = PARTIAL_REFRESH_LIMIT;
           scroll = 0;
           screen_update_scheduled = true;
           break;
@@ -422,7 +444,8 @@ int main()
   gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
 
   epaper_init();
-  image_buffer = gui_init(EPAPER_WIDTH, EPAPER_HEIGHT, GUI_ROTATE_270, GUI_BITS_PER_PIXEL_2, GUI_MIRROR_NONE);
+  image_buffer = gui_init(EPAPER_WIDTH, EPAPER_HEIGHT, DISPLAY_ROTATION, GUI_BITS_PER_PIXEL_2, GUI_MIRROR_NONE);
+  gui_draw_fill(EPAPER_WHITE);
 
   // Mount and maybe format the flash
   if ((gpio_get(BUTTON_0_PIN) && gpio_get(BUTTON_1_PIN) && gpio_get(BUTTON_2_PIN) && gpio_get(BUTTON_3_PIN)) || !attempt_mount_flash(&fatfs_work_area, true))

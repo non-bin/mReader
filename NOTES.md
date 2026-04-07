@@ -65,3 +65,5 @@ Chapter names if available, or h1-h3, or text after 1/2/3 line breaks (don't tri
 - Fix draw_string background color
 - Add license to gui
 - Use the TinyUSB bundled fatfs
+- place saving
+- chapters

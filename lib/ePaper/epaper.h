@@ -36,12 +36,12 @@
 #define EPAPER_WIDTH_BYTES ((EPAPER_WIDTH % 8 == 0) ? (EPAPER_WIDTH / 8) : (EPAPER_WIDTH / 8 + 1))
 #define EPAPER_IMAGE_SIZE (EPAPER_WIDTH_BYTES * EPAPER_HEIGHT)
 
-bool epaper_is_busy(void);
-void epaper_init(void);
-void epaper_partial_init(void);
+bool epaper_is_busy();
+void epaper_init();
+void epaper_enter_partial_mode();
+void epaper_enter_full_mode();
 void epaper_clear(uint16_t color);
-void epaper_display(const uint8_t *image, const bool partial);
-void epaper_partial_upload_base_image(const uint8_t *image);
-void epaper_sleep(void);
+void epaper_display(const uint8_t *image);
+void epaper_sleep();
 
 #endif /* __EPAPER_H_ */

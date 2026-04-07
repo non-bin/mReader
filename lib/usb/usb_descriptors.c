@@ -79,7 +79,7 @@ enum
 /**
  * \return Pointer to the device descriptor
  */
-uint8_t const *tud_descriptor_device_cb(void)
+uint8_t const *tud_descriptor_device_cb()
 {
   return (uint8_t const *)&device_descriptor;
 }
@@ -108,7 +108,6 @@ uint8_t const configuration_descriptor[] =
  */
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
-  (void)index;
   return configuration_descriptor;
 }
 
@@ -120,8 +119,6 @@ static uint16_t descriptor_string[32];
  */
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t language_id)
 {
-  (void)language_id;
-
   uint8_t character_count = 0;
 
   if (index == 0)

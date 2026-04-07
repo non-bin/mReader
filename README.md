@@ -8,13 +8,15 @@ Just plug me into a computer, drag and drop a text file on to the 'MREADER' driv
 ## Parts
 
 - [Waveshare 1.54inch V2 e-Paper with Module](https://www.waveshare.com/wiki/1.54inch_e-Paper_Module_Manual)
-- Any RP2040 based board, I use the [Waveshare RP2040-Zero](https://www.waveshare.com/wiki/RP2040-Zero)
+- [Waveshare RP2040-Zero](https://www.waveshare.com/wiki/RP2040-Zero)
 - 4 buttons
-- Battery and charger board
+- Battery and [charger board](https://wiki.dfrobot.com/dfr0667/)
 
 Wiring can be inferred from [config.h](./src/config.h)
 
-## Licence
+## Licences and Acknowledgements
+
+My fried Zoe saw [this video](https://www.tiktok.com/@mewtru/video/7603095098590498079) by [mewtru](https://mewtru.com/), and asked me to make one :)
 
 Generally, look at the comment at the top of each file, but here's an overview:
 

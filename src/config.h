@@ -109,8 +109,10 @@
 // Display //
 /////////////
 
+#define PARTIAL_REFRESH_LIMIT 50
+
 #define EPAPER_MODEL "1in54v2"
-#define EPAPER_TIMEOUT_MS (10 * 1000)
+#define DISPLAY_ROTATION GUI_ROTATE_90
 
 #define EPAPER_SPI_PORT spi1
 #define EPAPER_RST_PIN 12
