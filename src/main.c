@@ -412,7 +412,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
         break;
       }
     }
-    else if (events & GPIO_IRQ_EDGE_FALL && button_pressed[button_action])
+    else if (events & GPIO_IRQ_EDGE_RISE && button_pressed[button_action])
     {
       button_pressed[button_action] = false;
     }
