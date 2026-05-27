@@ -130,7 +130,10 @@ bool attempt_mount_flash(FATFS *fatfs_work_area, bool fail_gracefully)
   return true;
 }
 
-bool read_file_at_offset(FIL *file, uint32_t offset, char *buffer, uint32_t buffer_size)
+/**
+ * \return Number of bytes read, or 0 on error
+ */
+uint32_t read_file_at_offset(FIL *file, uint32_t offset, char *buffer, uint32_t buffer_size)
 {
   FRESULT fatfs_result = f_lseek(file, offset);
   if (fatfs_result != FR_OK)
@@ -138,17 +141,19 @@ bool read_file_at_offset(FIL *file, uint32_t offset, char *buffer, uint32_t buff
     flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
     sleep_ms(1000);
     error(ERROR_FATFS_LSEEK, false);
-    return false;
+    return 0;
   }
 
-  fatfs_result = f_read(file, buffer, buffer_size, NULL);
+  UINT bytes_read = 0;
+  fatfs_result = f_read(file, buffer, buffer_size - 1, &bytes_read);
   if (fatfs_result != FR_OK)
   {
     flash_code((char)fatfs_result, LED_BLUE, LED_GREEN, 6);
     sleep_ms(1000);
     error(ERROR_FATFS_LSEEK, false);
-    return false;
+    return 0;
   }
 
-  return true;
+  buffer[bytes_read] = '\0';
+  return bytes_read;
 }

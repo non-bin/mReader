@@ -24,4 +24,4 @@
 
 char *format_data_size(char *output, uint32_t input, uint32_t length);
 bool attempt_mount_flash(FATFS *fatfs_work_area, bool fail_gracefully);
-bool read_file_at_offset(FIL *file, uint32_t offset, char *buffer, uint32_t buffer_size);
+uint32_t read_file_at_offset(FIL *file, uint32_t offset, char *buffer, uint32_t buffer_size);
