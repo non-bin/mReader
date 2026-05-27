@@ -67,3 +67,4 @@ Chapter names if available, or h1-h3, or text after 1/2/3 line breaks (don't tri
 - Use the TinyUSB bundled fatfs
 - place saving
 - chapters
+- fail gracefully on full storage
