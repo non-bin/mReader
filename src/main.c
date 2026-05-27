@@ -301,7 +301,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
 {
   if ((events & GPIO_IRQ_EDGE_RISE) && (events & GPIO_IRQ_EDGE_FALL))
   {
-    return;
+    return; // Boing
   }
 
   absolute_time_t now = get_absolute_time();
@@ -328,7 +328,7 @@ void gpio_callback(const uint pin_number, const unsigned long events)
 
   if (absolute_time_diff_us(last_gpio_event_time[button_action], now) > DEBOUNCE_TIME_MS * 1000)
   {
-    if (events & GPIO_IRQ_EDGE_RISE && !button_pressed[button_action])
+    if (events & GPIO_IRQ_EDGE_FALL && !button_pressed[button_action])
     {
       button_pressed[button_action] = true;
 
@@ -435,12 +435,16 @@ int main()
 
   // Register button interrupts
   gpio_init(BUTTON_0_PIN);
+  gpio_pull_up(BUTTON_0_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_0_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
   gpio_init(BUTTON_1_PIN);
+  gpio_pull_up(BUTTON_1_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_1_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
   gpio_init(BUTTON_2_PIN);
+  gpio_pull_up(BUTTON_2_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_2_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
   gpio_init(BUTTON_3_PIN);
+  gpio_pull_up(BUTTON_3_PIN);
   gpio_set_irq_enabled_with_callback(BUTTON_3_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, gpio_callback);
 
   epaper_init();
@@ -448,7 +452,7 @@ int main()
   gui_draw_fill(EPAPER_WHITE);
 
   // Mount and maybe format the flash
-  if ((gpio_get(BUTTON_0_PIN) && gpio_get(BUTTON_1_PIN) && gpio_get(BUTTON_2_PIN) && gpio_get(BUTTON_3_PIN)) || !attempt_mount_flash(&fatfs_work_area, true))
+  if ((!gpio_get(BUTTON_0_PIN) && !gpio_get(BUTTON_1_PIN) && !gpio_get(BUTTON_2_PIN) && !gpio_get(BUTTON_3_PIN)) || !attempt_mount_flash(&fatfs_work_area, true))
   {
     put_pixel(LED_YELLOW);
 

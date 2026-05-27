@@ -38,7 +38,7 @@
 #define VERSION_STRING "v0.0.0" // eg "v2.14.3"
 #define VERSION_BCD 0x0000      // eg 0x2143
 #define HISTORY_LENGTH 4
-#define SCROLL_SIZE 4
+#define SCROLL_SIZE 1
 #define MAX_PATH_LENGTH 512
 
 //////////
@@ -48,7 +48,6 @@
 #define DEFAULT_FONT font12
 #define TAB_SIZE 2 // tabWidth = (space.width + characterGap) * TAB_SIZE
 #define WORD_SEPARATORS " \r\n\t&*+-/<=>\\_~"
-#define NEW_LINE_SPACING_MULTIPLIER 2
 
 // #define FORMAT_DATA_INCLUDE_IB // Whether to include "iB" after data sizes, e.g. "1.2MiB" instead of "1.2M"
 
@@ -96,14 +95,13 @@
 // Buttons //
 /////////////
 
-#define BUTTON_DEFAULT_ACTIONS {BUTTON_NEXT, BUTTON_ENTER, BUTTON_BACK, BUTTON_PREVIOUS}
+#define BUTTON_DEFAULT_ACTIONS {BUTTON_PREVIOUS, BUTTON_BACK, BUTTON_ENTER, BUTTON_NEXT}
 
 #define BUTTON_0_PIN 0
-#define BUTTON_1_PIN 2
-#define BUTTON_2_PIN 4
-#define BUTTON_3_PIN 6
+#define BUTTON_1_PIN 1
+#define BUTTON_2_PIN 2
+#define BUTTON_3_PIN 3
 #define DEBOUNCE_TIME_MS 20
-#define BUTTON_IRQ_EVENT GPIO_IRQ_EDGE_RISE // GPIO_IRQ_EDGE_FALL
 
 /////////////
 // Display //
