@@ -198,6 +198,10 @@ bool update_screen()
           }
           book_scroll_requested = 0;
         }
+
+        uint32_t file_size = f_size(&file);
+        if (book_scroll >= file_size)
+          book_scroll = file_size - 1;
       }
       else if (book_scroll_requested < 0) // Scrolling backwards
       {
@@ -238,6 +242,10 @@ bool update_screen()
               break;
             }
           }
+
+          if (book_scroll >= f_size(&file))
+            book_scroll = 0;
+
           book_scroll_requested = 0;
         }
       }
