@@ -531,7 +531,7 @@ uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const c
         return image_buffer_info.rotated_height; // TODO return a bool and update y_start via pointer
     }
 
-    #define MAX_WORD_LENGTH 256
+#define MAX_WORD_LENGTH 256
     char word[MAX_WORD_LENGTH] = {0};
     uint16_t word_length = 0;
     uint16_t word_width = -font->character_spacing; // The width of the word, initialized to -character_spacing to offset the first character's character_spacing
@@ -541,7 +541,7 @@ uint16_t gui_draw_string(const uint16_t x_start, const uint16_t y_start, const c
         if (*string == '\n') // Newline
         {
             x_point = x_start;
-            y_point += font->height + (font->line_spacing > 0 ? font->line_spacing * NEW_LINE_SPACING_MULTIPLIER : NEW_LINE_SPACING_MULTIPLIER);
+            y_point += font->height + font->line_spacing;
         }
         else if (*string == '\r') // Carriage return (works as a zero width space)
         {
