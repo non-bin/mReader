@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Filesystem
 - USB access
+- Basic fonts
+- GUI Framework
 - Scrolling
 - Basic menu
-- Basic font sizes
 - Devcontainer
 
 [unreleased]: https://github.com/non-bin/mReader
