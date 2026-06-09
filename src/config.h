@@ -45,7 +45,7 @@
 // Text //
 //////////
 
-#define DEFAULT_FONT font12
+#define DEFAULT_FONT 5
 #define TAB_SIZE 2 // tabWidth = (space.width + characterGap) * TAB_SIZE
 #define WORD_SEPARATORS " \r\n\t&*+-/<=>\\_~"
 
@@ -107,7 +107,7 @@
 // Display //
 /////////////
 
-#define PARTIAL_REFRESH_LIMIT 50
+#define PARTIAL_REFRESH_LIMIT 63
 
 #define EPAPER_MODEL "1in54v2"
 #define DISPLAY_ROTATION GUI_ROTATE_90

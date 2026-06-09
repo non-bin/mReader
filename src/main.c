@@ -54,7 +54,7 @@ int8_t book_scroll_requested = 0;
 page_t history[HISTORY_LENGTH] = {PAGE_FONT_SIZE};
 uint16_t history_index = 0;
 
-uint16_t font_index = 5;
+uint16_t font_index = DEFAULT_FONT;
 uint16_t fg_color = EPAPER_BLACK;
 uint16_t bg_color = EPAPER_WHITE;
 
@@ -91,7 +91,7 @@ bool update_screen()
       return false;
     }
 
-    cursor_y = gui_draw_string(0, cursor_y, "Welcome to mReader <3", &DEFAULT_FONT, fg_color, bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, "Welcome to mReader <3", fonts[font_index], fg_color, bg_color);
 
     for (uint8_t i = 0; i < 200; i++)
     {
@@ -125,7 +125,7 @@ bool update_screen()
         strrchr(file_name, '.')[0] = 0; // Remove file extension for display
         strlcat(text_buffer_1, file_name, sizeof(text_buffer_1));
 
-        cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, fg_color, bg_color);
+        cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, fonts[font_index], fg_color, bg_color);
       }
       else if (i == scroll)
         scroll++; // Skip directories
@@ -141,7 +141,7 @@ bool update_screen()
       return false;
     }
 
-    cursor_y = gui_draw_string(0, cursor_y, "", &DEFAULT_FONT, fg_color, bg_color); // New line
+    cursor_y = gui_draw_string(0, cursor_y, "", fonts[font_index], fg_color, bg_color); // New line
 
     format_data_size(text_buffer_1, (fs->n_fatent - 2 - free_clusters) * fs->csize * DISK_BLOCK_SIZE, sizeof(text_buffer_1));
     strlcat(text_buffer_1, "/", sizeof(text_buffer_1));
@@ -152,7 +152,7 @@ bool update_screen()
     strlcat(text_buffer_1, text_buffer_2, sizeof(text_buffer_1));
     strlcat(text_buffer_1, " Free", sizeof(text_buffer_1));
 
-    cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, &DEFAULT_FONT, fg_color, bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, text_buffer_1, fonts[font_index], fg_color, bg_color);
 
     fatfs_result = f_closedir(&root_directory);
     if (fatfs_result != FR_OK)
@@ -276,7 +276,7 @@ bool update_screen()
     strlcat(text_buffer_2, text_buffer_1, sizeof(text_buffer_2));
 
     gui_draw_fill(EPAPER_WHITE);
-    cursor_y = gui_draw_string(0, cursor_y, text_buffer_2, &DEFAULT_FONT, fg_color, bg_color);
+    cursor_y = gui_draw_string(0, cursor_y, text_buffer_2, fonts[font_index], fg_color, bg_color);
     gui_draw_string(0, cursor_y, FONT_PALLET, fonts[font_index], fg_color, bg_color);
 
     break;
